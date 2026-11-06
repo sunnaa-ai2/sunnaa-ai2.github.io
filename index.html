@@ -77,7 +77,7 @@ main{padding:22px 0 60px}
 .thumb{aspect-ratio:4/3;background:#eef2f7;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
 .thumb img{width:100%;height:100%;object-fit:cover}
 .thumb .ph{display:flex;flex-direction:column;align-items:center;gap:6px;color:#fff;font-weight:700;padding:10px;text-align:center;word-break:break-all}
-.thumb.pdf{background:var(--orange)}
+.thumb.pdf,.thumb.file{background:var(--orange)}
 .thumb.link{background:var(--green)}
 .badge-no{position:absolute;top:10px;right:10px;background:var(--blue);color:#fff;border-radius:10px;padding:3px 10px;font-weight:700;font-size:14px}
 .wacts{display:flex;gap:6px;padding:0 12px 12px}
@@ -122,7 +122,7 @@ textarea.in{min-height:90px;resize:vertical}
 .viewer{background:#0f1723;display:flex;align-items:center;justify-content:center;min-height:220px}
 .viewer img{max-height:75vh;width:auto;display:block}
 .bigtile{width:100%;padding:40px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;color:#fff;text-align:center}
-.bigtile.pdf{background:var(--orange)}
+.bigtile.pdf,.bigtile.file{background:var(--orange)}
 .bigtile.link{background:var(--green)}
 .bigtile .u{word-break:break-all;opacity:.9;font-size:14px}
 
@@ -208,6 +208,8 @@ const safeUrl = u => /^(https?:|data:|blob:)/i.test(String(u||'')) ? u : '#';
 const fmtDate = d => { try { return new Date(d).toLocaleDateString('ar-u-nu-latn',{day:'numeric',month:'long',year:'numeric'}); } catch(e){ return String(d).slice(0,10); } };
 const rid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16);}));
 const hashColor = s => { let h=0; for (const ch of String(s)) h=(h*31+ch.charCodeAt(0))|0; return COLORS[Math.abs(h)%COLORS.length]; };
+const fileExt = w => { const m = /\.([a-z0-9]{1,10})(?:[?#]|$)/i.exec(w.file_path || w.url || ''); return m && m[1].toLowerCase() !== 'bin' ? m[1].toUpperCase() : ''; };
+const fileLabel = w => w.kind === 'pdf' ? 'ملف PDF' : (fileExt(w) ? 'ملف ' + fileExt(w) : 'ملف');
 const domainOf = u => { try { return new URL(u).hostname.replace(/^www\./,''); } catch(e){ return u; } };
 
 const ICON = {
@@ -297,7 +299,7 @@ function MockApi(){
   };
   async function fileToUrl(file, kind){
     if (kind === 'image') return toDataUrl(await compressImage(file, 1000, .8));
-    if (file.size > 3*1024*1024) throw new Error('في وضع المعاينة الحد الأقصى لملف PDF هو 3MB');
+    if (file.size > 3*1024*1024) throw new Error('في وضع المعاينة الحد الأقصى للملف هو 3MB');
     return toDataUrl(file);
   }
   return {
@@ -400,11 +402,16 @@ function SupaApi(){
     if (user) { const { data } = await sb.rpc('is_admin'); admin = !!data; }
   }
   async function upload(file, kind, folderMax){
-    let blob = file, ext = 'pdf', type = 'application/pdf';
+    let blob = file, ext, type;
     if (kind === 'image' || kind === 'avatar') {
       blob = await compressImage(file, kind === 'avatar' ? 400 : (folderMax || 1600), .85);
       type = blob.type || 'image/jpeg'; ext = type === 'image/gif' ? 'gif' : 'jpg';
-    } else if (file.size > 10*1024*1024) throw new Error('حجم ملف PDF أكبر من 10MB');
+    } else {
+      if (file.size > 50*1024*1024) throw new Error('حجم الملف أكبر من 50MB');
+      const m = /\.([a-z0-9]{1,10})$/i.exec(file.name || '');
+      ext = m ? m[1].toLowerCase() : 'bin';
+      type = file.type || 'application/octet-stream';
+    }
     const path = `${user.id}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
     chk(await sb.storage.from('uploads').upload(path, blob, { contentType:type, upsert:false }));
     return { path, url: sb.storage.from('uploads').getPublicUrl(path).data.publicUrl };
@@ -565,7 +572,7 @@ function workCard(w, showOwner=true){
   const o = prof(w.user_id), c = counts(w.id), cc = S.ccount[w.id] || 0;
   let th;
   if (w.kind === 'image') th = `<div class="thumb"><img loading="lazy" src="${esc(safeUrl(w.url))}" alt="تمرين ${w.exercise_no}">`;
-  else if (w.kind === 'pdf') th = `<div class="thumb pdf"><div class="ph">${ICON.pdf}ملف PDF</div>`;
+  else if (w.kind === 'pdf' || w.kind === 'file') th = `<div class="thumb ${w.kind}"><div class="ph">${ICON.pdf}${esc(fileLabel(w))}</div>`;
   else th = `<div class="thumb link"><div class="ph">${ICON.link}${esc(domainOf(w.url))}</div>`;
   th += `<span class="badge-no">تمرين ${esc(w.exercise_no)}</span></div>`;
   const down = canSeeDislikes(w) ? `<span class="cnt">${ICON.down}${c.down}</span>` : '';
@@ -635,7 +642,7 @@ async function viewWork(id){
   const o = prof(w.user_id), u = me(), member = !!myProfile(), owner = u?.id === w.user_id, adm = api.isAdmin();
   let view;
   if (w.kind === 'image') view = `<div class="viewer"><img src="${esc(safeUrl(w.url))}" alt="تمرين ${w.exercise_no}"></div>`;
-  else if (w.kind === 'pdf') view = `<div class="bigtile pdf">${ICON.pdf}<b>ملف PDF</b><a class="btn yellow" href="${esc(safeUrl(w.url))}" target="_blank" rel="noopener">فتح الملف</a></div>`;
+  else if (w.kind === 'pdf' || w.kind === 'file') view = `<div class="bigtile ${w.kind}">${ICON.pdf}<b>${esc(fileLabel(w))}</b><a class="btn yellow" href="${esc(safeUrl(w.url))}" target="_blank" rel="noopener">فتح الملف</a></div>`;
   else view = `<div class="bigtile link">${ICON.link}<span class="u">${esc(w.url)}</span><a class="btn yellow" href="${esc(safeUrl(w.url))}" target="_blank" rel="noopener noreferrer">فتح الرابط</a></div>`;
   $('#app').innerHTML = `
     <a class="back" href="#u-${w.user_id}">${ICON.back}صفحة ${esc(o?.full_name||'المتدرب')}</a>
@@ -702,10 +709,10 @@ function workForm(w){
       <form id="wf">
         <label for="no">رقم التمرين</label>
         <input class="in" id="no" type="number" min="1" max="999" inputmode="numeric" required value="${editing ? esc(w.exercise_no) : ''}" style="max-width:160px">
-        ${editing ? `<label>المحتوى الحالي</label><div class="cur">${w.kind === 'image' ? `<img src="${esc(safeUrl(w.url))}" alt="">` : ''}<div><b>${w.kind === 'image' ? 'صورة' : w.kind === 'pdf' ? 'ملف PDF' : 'رابط'}</b>${w.kind === 'link' ? `<div class="hint" dir="ltr" style="margin:0;word-break:break-all">${esc(w.url)}</div>` : ''}</div></div>` : ''}
+        ${editing ? `<label>المحتوى الحالي</label><div class="cur">${w.kind === 'image' ? `<img src="${esc(safeUrl(w.url))}" alt="">` : ''}<div><b>${w.kind === 'image' ? 'صورة' : w.kind === 'link' ? 'رابط' : esc(fileLabel(w))}</b>${w.kind === 'link' ? `<div class="hint" dir="ltr" style="margin:0;word-break:break-all">${esc(w.url)}</div>` : ''}</div></div>` : ''}
         <label>${editing ? 'استبدال المحتوى (اختياري)' : 'نوع العمل'}</label>
         <div id="contentBox">
-          <div class="seg" id="seg"><button type="button" data-k="image">صورة</button><button type="button" data-k="pdf">ملف PDF</button><button type="button" data-k="link">رابط</button></div>
+          <div class="seg" id="seg"><button type="button" data-k="image">صورة</button><button type="button" data-k="file">ملف (أي صيغة)</button><button type="button" data-k="link">رابط</button></div>
           <div id="kindIn" style="margin-top:12px"></div>
           ${editing ? `<div class="hint">اترك الحقل فارغًا إذا بدك تغيّر رقم التمرين بس.</div>` : ''}
         </div>
@@ -713,12 +720,12 @@ function workForm(w){
         <div class="row" style="margin-top:18px"><button class="btn" id="sbtn">${editing ? 'حفظ التعديلات' : 'نشر التمرين'}</button></div>
       </form>
     </div>`;
-  let kind = editing ? w.kind : 'image';
+  let kind = editing ? (w.kind === 'pdf' ? 'file' : w.kind) : 'image';
   const drawKind = () => {
     $('#seg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.k === kind));
     $('#kindIn').innerHTML = kind === 'link'
       ? `<input class="in" id="url" type="url" dir="ltr" placeholder="https://…" value="${editing && w.kind === 'link' ? esc(w.url) : ''}"><div class="hint">مثال: رابط مشروع، رابط Canva، رابط محادثة أو موقع.</div>`
-      : `<input class="in" id="file" type="file" accept="${kind === 'image' ? 'image/png,image/jpeg,image/webp,image/gif' : 'application/pdf'}"><div class="hint">${kind === 'image' ? 'PNG أو JPG أو WEBP — يتم ضغط الصورة تلقائيًا.' : 'الحد الأقصى 10MB.'}</div>`;
+      : `<input class="in" id="file" type="file" ${kind === 'image' ? 'accept="image/png,image/jpeg,image/webp,image/gif"' : ''}><div class="hint">${kind === 'image' ? 'PNG أو JPG أو WEBP — يتم ضغط الصورة تلقائيًا.' : 'أي صيغة: PDF، Word، PowerPoint، Excel، ZIP، فيديو، كود… الحد الأقصى 50MB.'}</div>`;
   };
   drawKind();
   $('#seg').querySelectorAll('button').forEach(b => b.onclick = () => { kind = b.dataset.k; drawKind(); });
@@ -744,7 +751,7 @@ function workForm(w){
         const f = $('#file').files[0];
         if (!f) return err('اختر ملفًا.');
         if (kind === 'image' && !f.type.startsWith('image/')) return err('الملف المختار ليس صورة.');
-        if (kind === 'pdf' && f.type !== 'application/pdf') return err('الملف المختار ليس PDF.');
+        if (kind === 'file' && f.size > 50*1024*1024) return err('حجم الملف أكبر من 50MB.');
         data.file = f;
       }
     }

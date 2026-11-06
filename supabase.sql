@@ -35,7 +35,7 @@ create table if not exists public.works (
   id           uuid primary key default gen_random_uuid(),
   user_id      uuid not null default auth.uid() references public.profiles(id) on delete cascade,
   exercise_no  int  not null check (exercise_no between 1 and 999),
-  kind         text not null check (kind in ('image','pdf','link')),
+  kind         text not null check (kind in ('image','pdf','file','link')),
   url          text not null check (url ~* '^https?://'),
   file_path    text,
   created_at   timestamptz not null default now(),
@@ -186,12 +186,16 @@ create policy c_del on public.comments for delete to authenticated
   using (user_id = auth.uid() or public.is_admin());
 
 -- ---------------------------------------------------------------------
---  تخزين الصور وملفات PDF
+--  تخزين الصور والملفات (أي صيغة، حتى 50MB)
 -- ---------------------------------------------------------------------
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('uploads', 'uploads', true, 10485760,
-        array['image/jpeg','image/png','image/webp','image/gif','application/pdf'])
-on conflict (id) do nothing;
+values ('uploads', 'uploads', true, 52428800, null)
+on conflict (id) do update set file_size_limit = excluded.file_size_limit,
+                               allowed_mime_types = excluded.allowed_mime_types;
+
+-- للسماح بنوع "ملف" في قاعدة موجودة مسبقًا
+alter table public.works drop constraint if exists works_kind_check;
+alter table public.works add constraint works_kind_check check (kind in ('image','pdf','file','link'));
 
 drop policy if exists up_ins on storage.objects;
 drop policy if exists up_del on storage.objects;
