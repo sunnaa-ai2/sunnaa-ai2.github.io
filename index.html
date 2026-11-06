@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spark صُنّاع AI 2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --blue:#12559B; --blue-d:#0d4176; --yellow:#FFCC00; --orange:#FF8022; --green:#00BC3A;
+  --bg:#F3F5F9; --card:#fff; --ink:#1b2333; --muted:#667085; --line:#e4e8ef; --red:#d92d20;
+  --r:16px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:Tajawal,system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:16px;line-height:1.6}
+a{color:var(--blue);text-decoration:none}
+button,input,textarea,select{font-family:inherit;font-size:inherit}
+img{max-width:100%}
+.wrap{max-width:1080px;margin:0 auto;padding:0 16px}
+
+/* header */
+header.top{background:var(--blue);color:#fff;position:sticky;top:0;z-index:20}
+.top .wrap{display:flex;align-items:center;gap:14px;min-height:64px}
+.brand{display:flex;align-items:center;gap:12px;color:#fff}
+.brand img{height:38px;width:auto}
+.brand b{font-size:18px;font-weight:800;white-space:nowrap}
+.brand small{display:block;font-size:12px;opacity:.85;font-weight:500;margin-top:-4px}
+.nav{margin-inline-start:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.nav a,.nav button{color:#fff;background:transparent;border:0;padding:7px 11px;border-radius:10px;cursor:pointer;font-weight:500;font-size:15px}
+.nav a:hover,.nav button:hover{background:rgba(255,255,255,.12)}
+.nav .pill{background:var(--yellow);color:#1b2333;font-weight:700}
+.nav .pill:hover{background:#ffd633}
+.stripe{display:flex;height:5px}
+.stripe i{flex:1}
+.stripe i:nth-child(1){background:var(--green)}
+.stripe i:nth-child(2){background:var(--yellow)}
+.stripe i:nth-child(3){background:var(--orange)}
+.menu-btn{display:none}
+
+.demo-bar{background:#fff7d6;border-bottom:1px solid #f2e2a0;font-size:14px}
+.demo-bar .wrap{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:8px;padding-bottom:8px}
+.demo-bar select{padding:4px 8px;border-radius:8px;border:1px solid #e0cf86;background:#fff}
+
+main{padding:22px 0 60px}
+.hero{background:linear-gradient(135deg,var(--blue) 0%,#1a6bc0 100%);color:#fff;border-radius:22px;padding:26px 24px;position:relative;overflow:hidden;margin-bottom:22px}
+.hero h1{margin:0 0 6px;font-size:28px;font-weight:800}
+.hero p{margin:0;opacity:.92;max-width:560px}
+.hero .dots{position:absolute;left:18px;top:16px;display:grid;grid-template-columns:repeat(3,14px);gap:8px;opacity:.9}
+.hero .dots i{width:14px;height:14px;border-radius:50%;display:block}
+.stats{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+.stat{background:rgba(255,255,255,.14);border-radius:12px;padding:8px 14px}
+.stat b{font-size:20px;margin-inline-end:6px}
+
+.sec-title{display:flex;align-items:center;gap:10px;margin:26px 0 12px;font-size:20px;font-weight:800}
+.sec-title .d{display:flex;gap:4px}
+.sec-title .d i{width:9px;height:9px;border-radius:50%;display:block}
+.sec-title .grow{flex:1}
+
+.search{width:100%;max-width:340px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:#fff}
+
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.trainee{padding:18px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;transition:transform .15s,box-shadow .15s;color:inherit}
+.trainee:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(18,85,155,.12)}
+.trainee .name{font-weight:700;font-size:17px}
+.trainee .bio{color:var(--muted);font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.6em}
+.chip{display:inline-flex;align-items:center;gap:5px;background:#eef4fb;color:var(--blue);border-radius:999px;padding:2px 10px;font-size:13px;font-weight:700}
+.chip.admin{background:#fff3e8;color:#c55a0c}
+
+.avatar{border-radius:50%;object-fit:cover;flex:none;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:800}
+
+.work{display:flex;flex-direction:column;color:inherit;transition:transform .15s,box-shadow .15s}
+.work:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(18,85,155,.12)}
+.thumb{aspect-ratio:4/3;background:#eef2f7;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb .ph{display:flex;flex-direction:column;align-items:center;gap:6px;color:#fff;font-weight:700;padding:10px;text-align:center;word-break:break-all}
+.thumb.pdf{background:var(--orange)}
+.thumb.link{background:var(--green)}
+.badge-no{position:absolute;top:10px;right:10px;background:var(--blue);color:#fff;border-radius:10px;padding:3px 10px;font-weight:700;font-size:14px}
+.wacts{display:flex;gap:6px;padding:0 12px 12px}
+.wacts .btn{flex:1}
+.danger{border-color:#f4c7c3}
+.danger h2{color:var(--red)}
+.cur{display:flex;align-items:center;gap:10px;background:#f4f6fa;border-radius:12px;padding:10px;margin-bottom:10px}
+.cur img{width:64px;height:48px;object-fit:cover;border-radius:8px}
+.work .meta{padding:10px 12px;display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+.work .meta .who{display:flex;align-items:center;gap:6px;color:var(--ink);font-weight:500;flex:1;min-width:0}
+.work .meta .who span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cnt{display:inline-flex;align-items:center;gap:3px}
+
+.profile-head{display:flex;gap:18px;align-items:center;padding:20px;flex-wrap:wrap}
+.profile-head h1{margin:0;font-size:24px}
+.profile-head p{margin:4px 0 0;color:var(--muted)}
+.profile-head .acts{margin-inline-start:auto;display:flex;gap:8px;flex-wrap:wrap}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:0;border-radius:12px;padding:10px 16px;font-weight:700;cursor:pointer;background:var(--blue);color:#fff;font-size:15px}
+.btn:hover{background:var(--blue-d)}
+.btn:disabled{opacity:.55;cursor:default}
+.btn.ghost{background:#fff;color:var(--blue);border:1px solid var(--line)}
+.btn.ghost:hover{background:#f4f8fd}
+.btn.warn{background:#fff;color:var(--red);border:1px solid #f4c7c3}
+.btn.warn:hover{background:#fff4f3}
+.btn.yellow{background:var(--yellow);color:#1b2333}
+.btn.green{background:var(--green)}
+.btn.sm{padding:6px 11px;font-size:14px;border-radius:10px}
+
+.panel{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:20px;margin-bottom:16px}
+.panel h2{margin:0 0 12px;font-size:19px}
+label{display:block;font-weight:700;margin:12px 0 6px;font-size:15px}
+.in{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:12px;background:#fbfcfe}
+.in:focus{outline:2px solid #bcd6f2;border-color:var(--blue)}
+textarea.in{min-height:90px;resize:vertical}
+.hint{color:var(--muted);font-size:13px;margin-top:4px}
+.seg{display:flex;gap:6px;background:#eef2f7;padding:4px;border-radius:12px;width:max-content;max-width:100%}
+.seg button{border:0;background:transparent;padding:7px 14px;border-radius:9px;cursor:pointer;font-weight:700;color:var(--muted)}
+.seg button.on{background:#fff;color:var(--blue);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+.viewer{background:#0f1723;display:flex;align-items:center;justify-content:center;min-height:220px}
+.viewer img{max-height:75vh;width:auto;display:block}
+.bigtile{width:100%;padding:40px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;color:#fff;text-align:center}
+.bigtile.pdf{background:var(--orange)}
+.bigtile.link{background:var(--green)}
+.bigtile .u{word-break:break-all;opacity:.9;font-size:14px}
+
+.react{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rbtn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;cursor:pointer;font-weight:700;color:var(--ink)}
+.rbtn.on.up{background:#e7f8ee;border-color:#9fe0b6;color:#067a2a}
+.rbtn.on.down{background:#fff0e6;border-color:#ffc49a;color:#b64d00}
+.rbtn:disabled{cursor:default}
+
+.comments{display:flex;flex-direction:column;gap:12px;margin-top:8px}
+.cm{display:flex;gap:10px}
+.cm .bubble{background:#f4f6fa;border-radius:14px;padding:9px 13px;flex:1;min-width:0}
+.cm .bubble b{font-size:14px}
+.cm .bubble time{color:var(--muted);font-size:12px;margin-inline-start:6px}
+.cm .bubble p{margin:2px 0 0;white-space:pre-wrap;word-wrap:break-word}
+.cm .x{border:0;background:none;color:var(--muted);cursor:pointer;font-size:13px}
+
+.table{width:100%;border-collapse:collapse;font-size:15px}
+.table td,.table th{padding:10px 8px;border-bottom:1px solid var(--line);text-align:right;vertical-align:middle}
+.table th{color:var(--muted);font-weight:500;font-size:13px}
+.st{font-size:13px;font-weight:700;border-radius:999px;padding:2px 10px;white-space:nowrap}
+.st.ok{background:#e7f8ee;color:#067a2a}
+.st.wait{background:#fff8db;color:#8a6d00}
+
+.invite-out{background:#f4f8fd;border:1px dashed #9cc0e6;border-radius:12px;padding:14px;margin-top:14px}
+.invite-out code{display:block;direction:ltr;text-align:left;word-break:break-all;background:#fff;border-radius:8px;padding:8px;font-size:13px;margin:8px 0}
+
+.empty{text-align:center;color:var(--muted);padding:34px 16px;background:#fff;border:1px dashed var(--line);border-radius:var(--r)}
+.notice{background:#eef4fb;border-radius:12px;padding:12px 14px;color:#24456b;font-size:15px}
+.notice.err{background:#fff1f0;color:#a5241a}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1b2333;color:#fff;padding:11px 18px;border-radius:12px;z-index:100;font-weight:500;box-shadow:0 6px 24px rgba(0,0,0,.2);max-width:90vw}
+.modal-bg{position:fixed;inset:0;background:rgba(10,20,35,.5);display:flex;align-items:center;justify-content:center;z-index:90;padding:16px}
+.modal{background:#fff;border-radius:18px;padding:22px;max-width:400px;width:100%}
+.modal p{margin:0 0 16px;font-size:17px}
+.loading{text-align:center;color:var(--muted);padding:60px 0}
+.back{display:inline-flex;align-items:center;gap:6px;margin-bottom:12px;font-weight:700}
+footer{text-align:center;color:var(--muted);font-size:13px;padding:20px 0 30px}
+
+@media (max-width:720px){
+  .brand small{display:none}
+  .menu-btn{display:inline-flex;margin-inline-start:auto;background:transparent;border:0;color:#fff;padding:8px;cursor:pointer}
+  .nav{display:none;position:absolute;top:64px;right:0;left:0;background:var(--blue-d);flex-direction:column;align-items:stretch;padding:8px 12px 14px}
+  .nav.open{display:flex}
+  .nav a,.nav button{text-align:right;padding:11px 12px}
+  .hero h1{font-size:23px}
+  .hero .dots{display:none}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px}
+  .trainee{padding:14px 10px}
+  .profile-head .acts{margin-inline-start:0;width:100%}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#home"><img src="data:image/png;base64,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" alt="Spark"><div><b>صُنّاع AI 2</b><small>معرض أعمال المتدربين</small></div></a>
+    <button class="menu-btn" id="menuBtn" aria-label="القائمة"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <nav class="nav" id="nav"></nav>
+  </div>
+  <div class="stripe"><i></i><i></i><i></i></div>
+</header>
+<div id="demoBar"></div>
+<main class="wrap" id="app"><div class="loading">جاري التحميل…</div></main>
+<footer>Spark · For Innovation &amp; Creativity — سبارك للابتكار والإبداع · مبادرة صُنّاع</footer>
+
+<script>
+/* =========================================================
+   الإعدادات — ضع هنا بيانات مشروع Supabase الخاص بك.
+   إذا تُركت فارغة يعمل الموقع في "وضع المعاينة" ببيانات تجريبية.
+   ========================================================= */
+const CONFIG = {
+  SUPABASE_URL: "",       // مثال: https://abcdxyz.supabase.co
+  SUPABASE_ANON_KEY: ""   // المفتاح العام (anon public key)
+};
+/* ========================================================= */
+
+const DEMO = !CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY;
+const COLORS = ['#12559B','#FF8022','#00BC3A','#E0A800','#7a4fd0','#d63e6c'];
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeUrl = u => /^(https?:|data:|blob:)/i.test(String(u||'')) ? u : '#';
+const fmtDate = d => { try { return new Date(d).toLocaleDateString('ar-u-nu-latn',{day:'numeric',month:'long',year:'numeric'}); } catch(e){ return String(d).slice(0,10); } };
+const rid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16);}));
+const hashColor = s => { let h=0; for (const ch of String(s)) h=(h*31+ch.charCodeAt(0))|0; return COLORS[Math.abs(h)%COLORS.length]; };
+const domainOf = u => { try { return new URL(u).hostname.replace(/^www\./,''); } catch(e){ return u; } };
+
+const ICON = {
+  up:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v11H4V10zM7 10l4-8a3 3 0 0 1 3 3v4h5.5a2 2 0 0 1 2 2.3l-1.3 8A2 2 0 0 1 18.2 21H7"/></svg>',
+  down:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 14V3h3v11zM17 14l-4 8a3 3 0 0 1-3-3v-4H4.5a2 2 0 0 1-2-2.3l1.3-8A2 2 0 0 1 5.8 3H17"/></svg>',
+  cm:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
+  pdf:'<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 15h8M8 18h5"/></svg>',
+  link:'<svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>',
+  back:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+};
+const dotsHtml = () => `<span class="d"><i style="background:var(--green)"></i><i style="background:var(--yellow)"></i><i style="background:var(--orange)"></i></span>`;
+
+/* ---------- helpers: files ---------- */
+function compressImage(file, max=1600, q=.85){
+  return new Promise((res, rej) => {
+    if (file.type === 'image/gif') return res(file);
+    const img = new Image(); const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const s = Math.min(1, max/Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width*s); c.height = Math.round(img.height*s);
+      const x = c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => b ? res(b) : rej(new Error('IMG')), 'image/jpeg', q);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('IMG')); };
+    img.src = url;
+  });
+}
+const toDataUrl = blob => new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(blob); });
+
+/* =========================================================
+   Backend 1: وضع المعاينة (بيانات تجريبية في المتصفح)
+   ========================================================= */
+function MockApi(){
+  const KEY = 'spark_ai2_demo_v1';
+  const ADMINS = ['azanmd0592344829@gmail.com','ahmedafana652001@gmail.com'];
+  let db, listener = null;
+  const art = (n, c1, c2) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="800" height="600" fill="url(#g)"/><circle cx="640" cy="140" r="90" fill="#fff" opacity=".18"/><circle cx="160" cy="470" r="130" fill="#fff" opacity=".12"/><rect x="230" y="220" width="340" height="160" rx="24" fill="#fff" opacity=".9"/><text x="400" y="318" font-family="Tahoma,Arial" font-size="54" font-weight="700" text-anchor="middle" fill="${c1}">تصميم ${n}</text></svg>`);
+  function seed(){
+    const day = 864e5, now = Date.now();
+    const U = { abed:'u-abed', ahmed:'u-ahmed', sara:'u-sara', mo:'u-mo', layan:'u-layan' };
+    const users = [
+      {id:U.abed,email:ADMINS[0]},{id:U.ahmed,email:ADMINS[1]},
+      {id:U.sara,email:'sara@example.com'},{id:U.mo,email:'mohammed@example.com'},{id:U.layan,email:'layan@example.com'}
+    ];
+    const profiles = [
+      {id:U.abed,full_name:'عبد العزيز أبو علبة',bio:'طالب هندسة حاسوب في الجامعة الإسلامية، مهتم بتطوير الويب والذكاء الاصطناعي.',avatar_url:null,created_at:new Date(now-20*day).toISOString()},
+      {id:U.sara,full_name:'سارة (حساب تجريبي)',bio:'مصممة جرافيك، أحب الهويات البصرية والألوان.',avatar_url:null,created_at:new Date(now-18*day).toISOString()},
+      {id:U.mo,full_name:'محمد (حساب تجريبي)',bio:'أتعلم كتابة البرومبتات وأتمتة المهام.',avatar_url:null,created_at:new Date(now-17*day).toISOString()},
+      {id:U.layan,full_name:'ليان (حساب تجريبي)',bio:'',avatar_url:null,created_at:new Date(now-15*day).toISOString()},
+    ];
+    const W = (uid,no,kind,url,d) => ({id:rid(),user_id:uid,exercise_no:no,kind,url,file_path:null,created_at:new Date(now-d*day).toISOString()});
+    const works = [
+      W(U.abed,1,'image',art(1,'#12559B','#3b8de0'),14), W(U.abed,2,'link','https://claude.ai',10), W(U.abed,3,'image',art(3,'#FF8022','#ffb36b'),4),
+      W(U.sara,1,'image',art(1,'#00BC3A','#5fe08a'),13), W(U.sara,2,'image',art(2,'#7a4fd0','#b08cf0'),8),
+      W(U.mo,1,'pdf','data:application/pdf;base64,',12), W(U.mo,2,'image',art(2,'#d63e6c','#f08aa8'),3),
+      W(U.layan,1,'image',art(1,'#E0A800','#ffd84d'),6),
+    ];
+    const reactions = [
+      {work_id:works[0].id,user_id:U.sara,value:1},{work_id:works[0].id,user_id:U.mo,value:1},{work_id:works[0].id,user_id:U.layan,value:-1},
+      {work_id:works[3].id,user_id:U.abed,value:1},{work_id:works[4].id,user_id:U.mo,value:1},{work_id:works[6].id,user_id:U.abed,value:1},
+    ];
+    const comments = [
+      {id:rid(),work_id:works[0].id,user_id:U.sara,body:'الألوان متناسقة جدًا 👏',created_at:new Date(now-13*day).toISOString()},
+      {id:rid(),work_id:works[0].id,user_id:U.mo,body:'فكرة حلوة، ممكن تكبّر الخط شوي؟',created_at:new Date(now-12*day).toISOString()},
+      {id:rid(),work_id:works[3].id,user_id:U.abed,body:'شغل ممتاز!',created_at:new Date(now-12*day).toISOString()},
+    ];
+    const invites = [
+      {token:rid(),email:'sara@example.com',created_by:U.abed,created_at:new Date(now-19*day).toISOString(),used_at:new Date(now-18*day).toISOString(),used_by:U.sara},
+      {token:rid(),email:'new.trainee@example.com',created_by:U.ahmed,created_at:new Date(now-1*day).toISOString(),used_at:null,used_by:null},
+    ];
+    return {users,profiles,works,reactions,comments,invites,session:null};
+  }
+  try { db = JSON.parse(localStorage.getItem(KEY)); } catch(e) { db = null; }
+  if (!db || !db.users) db = seed();
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch(e) {} };
+  const me = () => db.users.find(u => u.id === db.session) || null;
+  const isAdmin = () => { const u = me(); return !!u && ADMINS.includes(u.email.toLowerCase()); };
+  const isMember = () => !!me() && db.profiles.some(p => p.id === db.session);
+  const need = c => { if (!c) throw new Error('FORBIDDEN'); };
+  const fire = () => listener && setTimeout(listener, 0);
+  const signIn = email => {
+    email = email.trim().toLowerCase();
+    let u = db.users.find(x => x.email === email);
+    if (!u) { u = {id:rid(), email}; db.users.push(u); }
+    db.session = u.id; save(); fire();
+  };
+  async function fileToUrl(file, kind){
+    if (kind === 'image') return toDataUrl(await compressImage(file, 1000, .8));
+    if (file.size > 3*1024*1024) throw new Error('في وضع المعاينة الحد الأقصى لملف PDF هو 3MB');
+    return toDataUrl(file);
+  }
+  return {
+    demo: true,
+    accounts: () => [
+      {label:'زائر (بدون تسجيل)', id:''},
+      {label:'عبد العزيز — أدمن', id:'u-abed'},
+      {label:'أحمد عفانة (المدرب) — أدمن', id:'u-ahmed'},
+      {label:'سارة — متدربة', id:'u-sara'},
+    ],
+    switchTo(id){ db.session = id || null; save(); fire(); },
+    reset(){ db = seed(); save(); fire(); },
+    async init(){},
+    onChange(cb){ listener = cb; },
+    user: () => { const u = me(); return u ? {id:u.id, email:u.email} : null; },
+    isAdmin,
+    async sendLink(email){ signIn(email); return 'demo'; },
+    async logout(){ db.session = null; save(); fire(); },
+    async profiles(){ return [...db.profiles].sort((a,b)=>a.created_at.localeCompare(b.created_at)); },
+    async works(){ return [...db.works].sort((a,b)=>a.created_at.localeCompare(b.created_at)); },
+    async reactions(){
+      const uid = db.session, adm = isAdmin();
+      return db.reactions.filter(r => r.value === 1 || r.user_id === uid || adm || db.works.find(w => w.id === r.work_id)?.user_id === uid);
+    },
+    async commentCounts(){ const c = {}; db.comments.forEach(x => c[x.work_id] = (c[x.work_id]||0)+1); return c; },
+    async comments(workId){ return db.comments.filter(c => c.work_id === workId).sort((a,b)=>a.created_at.localeCompare(b.created_at)); },
+    async react(workId, value){
+      need(isMember());
+      db.reactions = db.reactions.filter(r => !(r.work_id === workId && r.user_id === db.session));
+      if (value) db.reactions.push({work_id:workId, user_id:db.session, value});
+      save();
+    },
+    async addComment(workId, body){ need(isMember()); db.comments.push({id:rid(),work_id:workId,user_id:db.session,body,created_at:new Date().toISOString()}); save(); },
+    async delComment(id){ const c = db.comments.find(x=>x.id===id); need(c && (c.user_id===db.session || isAdmin())); db.comments = db.comments.filter(x=>x.id!==id); save(); },
+    async saveProfile(fields, avatar){
+      const p = db.profiles.find(x => x.id === db.session); need(p);
+      Object.assign(p, fields);
+      if (avatar) p.avatar_url = await toDataUrl(await compressImage(avatar, 300, .82));
+      save();
+    },
+    async addWork({exercise_no, kind, url, file}){
+      need(isMember());
+      if (kind !== 'link') url = await fileToUrl(file, kind);
+      db.works.push({id:rid(),user_id:db.session,exercise_no,kind,url,file_path:null,created_at:new Date().toISOString()}); save();
+    },
+    async updateWork(id, {exercise_no, kind, url, file}){
+      const w = db.works.find(x=>x.id===id); need(w && (w.user_id===db.session || isAdmin()));
+      w.exercise_no = exercise_no;
+      if (kind) { w.kind = kind; w.url = kind === 'link' ? url : await fileToUrl(file, kind); }
+      w.updated_at = new Date().toISOString(); save();
+    },
+    async delWork(w){ need(w.user_id===db.session || isAdmin()); db.works = db.works.filter(x=>x.id!==w.id); db.reactions = db.reactions.filter(r=>r.work_id!==w.id); db.comments = db.comments.filter(c=>c.work_id!==w.id); save(); },
+    async join(token, name){
+      const u = me(); if (!u) throw new Error('NOT_LOGGED_IN');
+      if (isMember()) return;
+      if (!token) { if (!isAdmin()) throw new Error('INVITE_REQUIRED'); }
+      else {
+        const inv = db.invites.find(i => i.token === token);
+        if (!inv) throw new Error('INVITE_INVALID');
+        if (inv.used_at) throw new Error('INVITE_USED');
+        if (inv.email.toLowerCase() !== u.email) throw new Error('INVITE_EMAIL_MISMATCH');
+        inv.used_at = new Date().toISOString(); inv.used_by = u.id;
+      }
+      db.profiles.push({id:u.id, full_name:name, bio:'', avatar_url:null, created_at:new Date().toISOString()}); save();
+    },
+    async invites(){ need(isAdmin()); return [...db.invites].sort((a,b)=>b.created_at.localeCompare(a.created_at)); },
+    async createInvite(email){ need(isAdmin()); const inv = {token:rid(),email:email.toLowerCase(),created_by:db.session,created_at:new Date().toISOString(),used_at:null,used_by:null}; db.invites.push(inv); save(); return inv; },
+    async delInvite(token){ need(isAdmin()); db.invites = db.invites.filter(i=>i.token!==token); save(); },
+    async delMember(id){
+      need(isAdmin());
+      const wids = db.works.filter(w=>w.user_id===id).map(w=>w.id);
+      db.profiles = db.profiles.filter(p=>p.id!==id); db.works = db.works.filter(w=>w.user_id!==id);
+      db.reactions = db.reactions.filter(r=>r.user_id!==id && !wids.includes(r.work_id));
+      db.comments = db.comments.filter(c=>c.user_id!==id && !wids.includes(c.work_id)); save();
+    },
+    async deleteMyAccount(){
+      const id = db.session; need(id);
+      const wids = db.works.filter(w=>w.user_id===id).map(w=>w.id);
+      db.profiles = db.profiles.filter(p=>p.id!==id); db.works = db.works.filter(w=>w.user_id!==id);
+      db.reactions = db.reactions.filter(r=>r.user_id!==id && !wids.includes(r.work_id));
+      db.comments = db.comments.filter(c=>c.user_id!==id && !wids.includes(c.work_id));
+      db.users = db.users.filter(u=>u.id!==id); db.session = null; save(); fire();
+    },
+  };
+}
+
+/* =========================================================
+   Backend 2: Supabase (الموقع الحقيقي)
+   ========================================================= */
+function SupaApi(){
+  const sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+    auth: { flowType:'implicit', persistSession:true, detectSessionInUrl:true, autoRefreshToken:true }
+  });
+  let user = null, admin = false, listener = null;
+  const chk = ({data, error}) => { if (error) throw error; return data; };
+  async function loadAuth(){
+    const { data:{ session } } = await sb.auth.getSession();
+    user = session ? { id:session.user.id, email:(session.user.email||'').toLowerCase() } : null;
+    admin = false;
+    if (user) { const { data } = await sb.rpc('is_admin'); admin = !!data; }
+  }
+  async function upload(file, kind, folderMax){
+    let blob = file, ext = 'pdf', type = 'application/pdf';
+    if (kind === 'image' || kind === 'avatar') {
+      blob = await compressImage(file, kind === 'avatar' ? 400 : (folderMax || 1600), .85);
+      type = blob.type || 'image/jpeg'; ext = type === 'image/gif' ? 'gif' : 'jpg';
+    } else if (file.size > 10*1024*1024) throw new Error('حجم ملف PDF أكبر من 10MB');
+    const path = `${user.id}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+    chk(await sb.storage.from('uploads').upload(path, blob, { contentType:type, upsert:false }));
+    return { path, url: sb.storage.from('uploads').getPublicUrl(path).data.publicUrl };
+  }
+  const rmFile = async p => { if (p) await sb.storage.from('uploads').remove([p]); };
+  return {
+    demo: false,
+    async init(){
+      await loadAuth();
+      sb.auth.onAuthStateChange(ev => {
+        if (['SIGNED_IN','SIGNED_OUT','USER_UPDATED'].includes(ev)) setTimeout(() => loadAuth().then(() => listener && listener()), 0);
+      });
+    },
+    onChange(cb){ listener = cb; },
+    user: () => user,
+    isAdmin: () => admin,
+    async sendLink(email, token){
+      const redirect = location.origin + location.pathname + (token ? '?invite=' + encodeURIComponent(token) : '');
+      chk(await sb.auth.signInWithOtp({ email:email.trim().toLowerCase(), options:{ emailRedirectTo: redirect, shouldCreateUser:true } }));
+    },
+    async logout(){ await sb.auth.signOut(); },
+    async profiles(){ return chk(await sb.from('profiles').select('*').order('created_at')); },
+    async works(){ return chk(await sb.from('works').select('*').order('created_at')); },
+    async reactions(){ return chk(await sb.from('reactions').select('work_id,user_id,value')); },
+    async commentCounts(){ const rows = chk(await sb.from('comments').select('work_id')); const c = {}; rows.forEach(r => c[r.work_id] = (c[r.work_id]||0)+1); return c; },
+    async comments(workId){ return chk(await sb.from('comments').select('*').eq('work_id', workId).order('created_at')); },
+    async react(workId, value){
+      if (!value) chk(await sb.from('reactions').delete().eq('work_id', workId).eq('user_id', user.id));
+      else chk(await sb.from('reactions').upsert({ work_id:workId, user_id:user.id, value }, { onConflict:'work_id,user_id' }));
+    },
+    async addComment(workId, body){ chk(await sb.from('comments').insert({ work_id:workId, user_id:user.id, body })); },
+    async delComment(id){ chk(await sb.from('comments').delete().eq('id', id)); },
+    async saveProfile(fields, avatar){
+      const upd = { ...fields };
+      if (avatar) upd.avatar_url = (await upload(avatar, 'avatar')).url;
+      chk(await sb.from('profiles').update(upd).eq('id', user.id));
+    },
+    async addWork({exercise_no, kind, url, file}){
+      let file_path = null;
+      if (kind !== 'link') { const up = await upload(file, kind); url = up.url; file_path = up.path; }
+      chk(await sb.from('works').insert({ user_id:user.id, exercise_no, kind, url, file_path }));
+    },
+    async updateWork(id, {exercise_no, kind, url, file, old}){
+      const upd = { exercise_no, updated_at:new Date().toISOString() };
+      if (kind) {
+        upd.kind = kind; upd.file_path = null; upd.url = url;
+        if (kind !== 'link') { const up = await upload(file, kind); upd.url = up.url; upd.file_path = up.path; }
+      }
+      chk(await sb.from('works').update(upd).eq('id', id));
+      if (kind && old?.file_path) await rmFile(old.file_path);
+    },
+    async delWork(w){ chk(await sb.from('works').delete().eq('id', w.id)); await rmFile(w.file_path); },
+    async join(token, name){ chk(await sb.rpc('join_with_invite', { p_token: token || null, p_name: name })); },
+    async invites(){ return chk(await sb.from('invites').select('*').order('created_at', { ascending:false })); },
+    async createInvite(email){ return chk(await sb.from('invites').insert({ email:email.trim().toLowerCase() }).select().single()); },
+    async delInvite(token){ chk(await sb.from('invites').delete().eq('token', token)); },
+    async delMember(id){
+      const paths = (await sb.from('works').select('file_path').eq('user_id', id)).data?.map(r => r.file_path).filter(Boolean) || [];
+      const av = (await sb.from('profiles').select('avatar_url').eq('id', id).single()).data?.avatar_url;
+      const avp = av && av.split('/uploads/')[1]; if (avp) paths.push(decodeURIComponent(avp));
+      chk(await sb.from('profiles').delete().eq('id', id));
+      if (paths.length) await sb.storage.from('uploads').remove(paths);
+    },
+    async deleteMyAccount(){
+      const paths = (await sb.from('works').select('file_path').eq('user_id', user.id)).data?.map(r => r.file_path).filter(Boolean) || [];
+      const av = (await sb.from('profiles').select('avatar_url').eq('id', user.id).single()).data?.avatar_url;
+      const avp = av && av.split('/uploads/')[1]; if (avp) paths.push(decodeURIComponent(avp));
+      if (paths.length) await sb.storage.from('uploads').remove(paths);
+      chk(await sb.rpc('delete_my_account'));
+      await sb.auth.signOut();
+    },
+  };
+}
+
+/* =========================================================
+   الحالة والواجهة
+   ========================================================= */
+let api;
+const S = { profiles:[], works:[], reactions:[], ccount:{}, loaded:false };
+let pendingInvite = null;
+
+function errMsg(e){
+  const m = String(e?.message || e || '');
+  const map = {
+    INVITE_INVALID:'رابط الدعوة غير صالح أو تم حذفه.',
+    INVITE_USED:'رابط الدعوة هذا استُخدم من قبل. كل رابط يعمل لمرة واحدة فقط.',
+    INVITE_EMAIL_MISMATCH:'رابط الدعوة هذا مخصص لبريد إلكتروني آخر. سجّل الدخول بنفس البريد الذي وصلته الدعوة عليه.',
+    INVITE_REQUIRED:'لا يمكنك الانضمام بدون رابط دعوة.',
+    NOT_LOGGED_IN:'يجب تسجيل الدخول أولًا.',
+    FORBIDDEN:'ليس لديك صلاحية لهذا الإجراء.',
+    'rate limit':'تم إرسال عدد كبير من الرسائل، حاول بعد قليل.',
+    'duplicate key':'هذا العنصر موجود مسبقًا.',
+  };
+  for (const k in map) if (m.includes(k)) return map[k];
+  return m || 'حدث خطأ غير متوقع';
+}
+function toast(msg){
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+function confirmBox(msg, okText='تأكيد'){
+  return new Promise(res => {
+    const bg = document.createElement('div'); bg.className = 'modal-bg';
+    bg.innerHTML = `<div class="modal"><p>${esc(msg)}</p><div class="row"><button class="btn warn" data-ok>${esc(okText)}</button><button class="btn ghost" data-no>إلغاء</button></div></div>`;
+    bg.onclick = e => { if (e.target === bg || e.target.dataset.no !== undefined) { bg.remove(); res(false); } if (e.target.dataset.ok !== undefined) { bg.remove(); res(true); } };
+    document.body.appendChild(bg);
+  });
+}
+async function copy(text){
+  try { await navigator.clipboard.writeText(text); toast('تم النسخ'); }
+  catch(e) { toast('لم يتم النسخ تلقائيًا — انسخ الرابط يدويًا'); }
+}
+
+const me = () => api.user();
+const myProfile = () => { const u = me(); return u ? S.profiles.find(p => p.id === u.id) : null; };
+const prof = id => S.profiles.find(p => p.id === id);
+const avatar = (p, size=44) => {
+  if (p?.avatar_url) return `<img class="avatar" src="${esc(safeUrl(p.avatar_url))}" alt="" style="width:${size}px;height:${size}px">`;
+  const n = (p?.full_name || '؟').trim();
+  return `<span class="avatar" style="width:${size}px;height:${size}px;background:${hashColor(p?.id||n)};font-size:${Math.round(size*.42)}px">${esc(n.charAt(0))}</span>`;
+};
+function counts(workId){
+  let up = 0, down = 0, mine = 0; const u = me();
+  S.reactions.forEach(r => { if (r.work_id !== workId) return; r.value === 1 ? up++ : down++; if (u && r.user_id === u.id) mine = r.value; });
+  return { up, down, mine };
+}
+function canSeeDislikes(w){ const u = me(); return !!u && (u.id === w.user_id || api.isAdmin()); }
+
+async function loadAll(){
+  const [profiles, works, reactions, ccount] = await Promise.all([api.profiles(), api.works(), api.reactions(), api.commentCounts()]);
+  Object.assign(S, { profiles, works, reactions, ccount, loaded:true });
+}
+
+/* ---------- nav ---------- */
+function renderNav(){
+  const u = me(), p = myProfile(), adm = api.isAdmin();
+  let h = `<a href="#home">الرئيسية</a>`;
+  if (p) h += `<a href="#u-${p.id}">صفحتي</a><a href="#add" class="pill">+ إضافة تمرين</a>`;
+  else if (u && (adm || pendingInvite)) h += `<a href="#join" class="pill">أكمل التسجيل</a>`;
+  if (adm) h += `<a href="#admin">لوحة التحكم</a>`;
+  if (u) h += `<a href="#me">حسابي</a><button id="logoutBtn">خروج</button>`;
+  else h += `<a href="#login" class="pill">دخول الأعضاء</a>`;
+  $('#nav').innerHTML = h;
+  const lo = $('#logoutBtn'); if (lo) lo.onclick = async () => { await api.logout(); location.hash = '#home'; };
+}
+function renderDemoBar(){
+  if (!api.demo) { $('#demoBar').innerHTML = ''; return; }
+  const cur = me()?.id || '';
+  const opts = api.accounts().map(a => `<option value="${a.id}" ${a.id===cur?'selected':''}>${esc(a.label)}</option>`).join('');
+  const custom = cur && !api.accounts().some(a => a.id === cur) ? `<option selected>${esc(me().email)}</option>` : '';
+  $('#demoBar').innerHTML = `<div class="demo-bar"><div class="wrap"><b>وضع المعاينة:</b> بيانات تجريبية محفوظة في متصفحك فقط. جرّب الموقع كـ <select id="acc">${custom}${opts}</select><button class="btn ghost sm" id="resetDemo">إعادة البيانات</button></div></div>`;
+  $('#acc').onchange = e => { api.switchTo(e.target.value); };
+  $('#resetDemo').onclick = () => { api.reset(); toast('تمت إعادة البيانات التجريبية'); };
+}
+
+/* ---------- views ---------- */
+function workCard(w, showOwner=true){
+  const o = prof(w.user_id), c = counts(w.id), cc = S.ccount[w.id] || 0;
+  let th;
+  if (w.kind === 'image') th = `<div class="thumb"><img loading="lazy" src="${esc(safeUrl(w.url))}" alt="تمرين ${w.exercise_no}">`;
+  else if (w.kind === 'pdf') th = `<div class="thumb pdf"><div class="ph">${ICON.pdf}ملف PDF</div>`;
+  else th = `<div class="thumb link"><div class="ph">${ICON.link}${esc(domainOf(w.url))}</div>`;
+  th += `<span class="badge-no">تمرين ${esc(w.exercise_no)}</span></div>`;
+  const down = canSeeDislikes(w) ? `<span class="cnt">${ICON.down}${c.down}</span>` : '';
+  const who = showOwner ? `<span class="who">${avatar(o,24)}<span>${esc(o?.full_name||'')}</span></span>` : `<span class="who"><span>${fmtDate(w.created_at)}</span></span>`;
+  const u = me(), manage = !showOwner && u && (u.id === w.user_id || api.isAdmin());
+  const acts = manage ? `<div class="wacts">${u.id === w.user_id ? `<a class="btn ghost sm" href="#edit-${w.id}">تعديل</a>` : ''}<button class="btn warn sm" data-delwork="${w.id}">حذف</button></div>` : '';
+  return `<div class="card work"><a href="#w-${w.id}" style="color:inherit">${th}<div class="meta">${who}<span class="cnt">${ICON.up}${c.up}</span>${down}<span class="cnt">${ICON.cm}${cc}</span></div></a>${acts}</div>`;
+}
+async function deleteWorkFlow(w, after){
+  if (!await confirmBox('حذف هذا العمل نهائيًا مع تعليقاته وتفاعلاته؟', 'حذف')) return;
+  try { await api.delWork(w); toast('تم حذف العمل'); await refresh(false); after ? after() : route(); } catch(e) { toast(errMsg(e)); }
+}
+
+function viewHome(){
+  const wc = {}; S.works.forEach(w => wc[w.user_id] = (wc[w.user_id]||0)+1);
+  $('#app').innerHTML = `
+    <section class="hero">
+      <div class="dots"><i style="background:#fff"></i><i style="background:var(--yellow)"></i><i style="background:#fff"></i><i style="background:var(--orange)"></i><i style="background:#fff"></i><i style="background:var(--green)"></i></div>
+      <h1>صُنّاع AI 2</h1>
+      <p>معرض أعمال متدربي مبادرة صُنّاع، سبارك للابتكار والإبداع. تصفّح المتدربين وتمارينهم وتصاميمهم.</p>
+      <div class="stats"><span class="stat"><b>${S.profiles.length}</b>متدرب</span><span class="stat"><b>${S.works.length}</b>عمل منشور</span></div>
+    </section>
+    <div class="sec-title">${dotsHtml()}<span class="grow">المتدربون</span></div>
+    <input class="search" id="q" placeholder="ابحث عن متدرب بالاسم…">
+    <div class="grid" id="tgrid" style="margin-top:12px"></div>`;
+  const drawT = q => {
+    const list = S.profiles.filter(p => !q || p.full_name.includes(q));
+    $('#tgrid').innerHTML = list.length ? list.map(p => `
+      <a class="card trainee" href="#u-${p.id}">${avatar(p,76)}<div class="name">${esc(p.full_name)}</div>
+      <div class="bio">${esc(p.bio || '')}</div><span class="chip">${wc[p.id]||0} عمل</span></a>`).join('')
+      : `<div class="empty" style="grid-column:1/-1">${q ? 'لا يوجد متدرب بهذا الاسم.' : 'لا يوجد متدربون بعد.'}</div>`;
+  };
+  drawT('');
+  $('#q').oninput = e => drawT(e.target.value.trim());
+}
+
+function viewProfile(id){
+  const p = prof(id);
+  if (!p) return notFound('هذا المتدرب غير موجود.');
+  const works = S.works.filter(w => w.user_id === id).sort((a,b)=>a.created_at.localeCompare(b.created_at));
+  const mine = me()?.id === id, adm = api.isAdmin();
+  const shareUrl = location.origin + location.pathname + '#u-' + id;
+  $('#app').innerHTML = `
+    <a class="back" href="#home">${ICON.back}كل المتدربين</a>
+    <div class="card profile-head">${avatar(p,92)}
+      <div><h1>${esc(p.full_name)}</h1>${p.bio ? `<p>${esc(p.bio)}</p>` : ''}<div class="row" style="margin-top:6px"><span class="chip">${works.length} عمل</span><span class="hint" style="margin:0">انضم ${fmtDate(p.created_at)}</span></div></div>
+      <div class="acts">
+        ${mine ? `<a class="btn yellow" href="#add">+ إضافة تمرين</a><a class="btn ghost" href="#me">تعديل الملف</a>` : ''}
+        <button class="btn ghost" id="shareP">نسخ رابط الصفحة</button>
+        ${adm && !mine ? `<button class="btn warn" id="delM">إزالة العضو</button>` : ''}
+      </div>
+    </div>
+    <div class="sec-title">${dotsHtml()}<span class="grow">الأعمال (من الأقدم للأحدث)</span></div>
+    ${works.length ? `<div class="grid">${works.map(w=>workCard(w,false)).join('')}</div>` : `<div class="empty">${mine ? 'لم تنشر أي عمل بعد. ابدأ بإضافة أول تمرين!' : 'لم ينشر هذا المتدرب أي عمل بعد.'}</div>`}`;
+  $('#shareP').onclick = () => copy(shareUrl);
+  $('#app').querySelectorAll('[data-delwork]').forEach(b => b.onclick = () => deleteWorkFlow(S.works.find(x => x.id === b.dataset.delwork)));
+  const dm = $('#delM');
+  if (dm) dm.onclick = async () => {
+    if (!await confirmBox(`إزالة ${p.full_name} من المنصة؟ سيتم حذف ملفه وكل أعماله وتعليقاته. لن يستطيع العودة إلا برابط دعوة جديد.`, 'إزالة')) return;
+    try { await api.delMember(id); toast('تمت إزالة العضو'); location.hash = '#home'; await refresh(); } catch(e) { toast(errMsg(e)); }
+  };
+}
+
+async function viewWork(id){
+  const w = S.works.find(x => x.id === id);
+  if (!w) return notFound('هذا العمل غير موجود أو تم حذفه.');
+  const o = prof(w.user_id), u = me(), member = !!myProfile(), owner = u?.id === w.user_id, adm = api.isAdmin();
+  let view;
+  if (w.kind === 'image') view = `<div class="viewer"><img src="${esc(safeUrl(w.url))}" alt="تمرين ${w.exercise_no}"></div>`;
+  else if (w.kind === 'pdf') view = `<div class="bigtile pdf">${ICON.pdf}<b>ملف PDF</b><a class="btn yellow" href="${esc(safeUrl(w.url))}" target="_blank" rel="noopener">فتح الملف</a></div>`;
+  else view = `<div class="bigtile link">${ICON.link}<span class="u">${esc(w.url)}</span><a class="btn yellow" href="${esc(safeUrl(w.url))}" target="_blank" rel="noopener noreferrer">فتح الرابط</a></div>`;
+  $('#app').innerHTML = `
+    <a class="back" href="#u-${w.user_id}">${ICON.back}صفحة ${esc(o?.full_name||'المتدرب')}</a>
+    <div class="card">${view}
+      <div style="padding:16px 18px">
+        <div class="row" style="justify-content:space-between">
+          <a class="row" href="#u-${w.user_id}" style="color:inherit">${avatar(o,40)}<div><b>${esc(o?.full_name||'')}</b><div class="hint" style="margin:0">تمرين رقم ${esc(w.exercise_no)} · ${fmtDate(w.created_at)}</div></div></a>
+          ${owner || adm ? `<div class="row">${owner ? `<a class="btn ghost sm" href="#edit-${w.id}">تعديل</a>` : ''}<button class="btn warn sm" id="delW">حذف</button></div>` : ''}
+        </div>
+        <div class="react" id="react" style="margin-top:14px"></div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px"><h2>التعليقات</h2>
+      <div class="comments" id="cms"><div class="hint">جاري التحميل…</div></div>
+      ${member ? `<form id="cf" style="margin-top:14px"><textarea class="in" id="cbody" maxlength="1000" placeholder="اكتب تعليقًا…" required></textarea><div class="row" style="margin-top:8px"><button class="btn">نشر التعليق</button></div></form>`
+        : `<div class="notice" style="margin-top:14px">${u ? 'التعليق والتفاعل متاح لأعضاء المنصة المدعوين فقط.' : 'التعليق والتفاعل متاح لأعضاء المنصة. <a href="#login">دخول الأعضاء</a>'}</div>`}
+    </div>`;
+  const drawReact = () => {
+    const c = counts(w.id), dis = !member;
+    $('#react').innerHTML = `
+      <button class="rbtn up ${c.mine===1?'on':''}" data-v="1" ${dis?'disabled':''}>${ICON.up}<span>إعجاب</span><b>${c.up}</b></button>
+      <button class="rbtn down ${c.mine===-1?'on':''}" data-v="-1" ${dis?'disabled':''}>${ICON.down}<span>عدم إعجاب</span>${canSeeDislikes(w) ? `<b>${c.down}</b>` : ''}</button>
+      ${!canSeeDislikes(w) && member ? `<span class="hint" style="margin:0">عدد عدم الإعجاب يظهر لصاحب العمل فقط</span>` : ''}`;
+    $('#react').querySelectorAll('.rbtn').forEach(b => b.onclick = async () => {
+      if (!member) return;
+      const v = +b.dataset.v, nv = c.mine === v ? 0 : v;
+      S.reactions = S.reactions.filter(r => !(r.work_id === w.id && r.user_id === u.id));
+      if (nv) S.reactions.push({ work_id:w.id, user_id:u.id, value:nv });
+      drawReact();
+      try { await api.react(w.id, nv); } catch(e) { toast(errMsg(e)); S.reactions = await api.reactions(); drawReact(); }
+    });
+  };
+  drawReact();
+  const drawComments = async () => {
+    let list = [];
+    try { list = await api.comments(w.id); } catch(e) { $('#cms').innerHTML = `<div class="notice err">${esc(errMsg(e))}</div>`; return; }
+    S.ccount[w.id] = list.length;
+    $('#cms').innerHTML = list.length ? list.map(c => { const a = prof(c.user_id); return `
+      <div class="cm">${avatar(a,36)}<div class="bubble"><a href="#u-${c.user_id}"><b>${esc(a?.full_name || 'عضو سابق')}</b></a><time>${fmtDate(c.created_at)}</time>
+      ${(u && (c.user_id === u.id || adm)) ? `<button class="x" data-del="${c.id}">حذف</button>` : ''}<p>${esc(c.body)}</p></div></div>`; }).join('')
+      : `<div class="hint">لا توجد تعليقات بعد.</div>`;
+    $('#cms').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+      if (!await confirmBox('حذف هذا التعليق؟', 'حذف')) return;
+      try { await api.delComment(b.dataset.del); drawComments(); } catch(e) { toast(errMsg(e)); }
+    });
+  };
+  drawComments();
+  const cf = $('#cf');
+  if (cf) cf.onsubmit = async e => {
+    e.preventDefault(); const body = $('#cbody').value.trim(); if (!body) return;
+    const btn = cf.querySelector('button'); btn.disabled = true;
+    try { await api.addComment(w.id, body); $('#cbody').value = ''; await drawComments(); } catch(er) { toast(errMsg(er)); }
+    btn.disabled = false;
+  };
+  const dw = $('#delW');
+  if (dw) dw.onclick = () => deleteWorkFlow(w, () => { location.hash = '#u-' + w.user_id; });
+}
+
+function workForm(w){
+  const editing = !!w;
+  $('#app').innerHTML = `
+    <a class="back" href="${editing ? '#w-'+w.id : '#u-'+me().id}">${ICON.back}رجوع</a>
+    <div class="panel"><h2>${editing ? 'تعديل التمرين' : 'إضافة تمرين جديد'}</h2>
+      <form id="wf">
+        <label for="no">رقم التمرين</label>
+        <input class="in" id="no" type="number" min="1" max="999" inputmode="numeric" required value="${editing ? esc(w.exercise_no) : ''}" style="max-width:160px">
+        ${editing ? `<label>المحتوى الحالي</label><div class="cur">${w.kind === 'image' ? `<img src="${esc(safeUrl(w.url))}" alt="">` : ''}<div><b>${w.kind === 'image' ? 'صورة' : w.kind === 'pdf' ? 'ملف PDF' : 'رابط'}</b>${w.kind === 'link' ? `<div class="hint" dir="ltr" style="margin:0;word-break:break-all">${esc(w.url)}</div>` : ''}</div></div>` : ''}
+        <label>${editing ? 'استبدال المحتوى (اختياري)' : 'نوع العمل'}</label>
+        <div id="contentBox">
+          <div class="seg" id="seg"><button type="button" data-k="image">صورة</button><button type="button" data-k="pdf">ملف PDF</button><button type="button" data-k="link">رابط</button></div>
+          <div id="kindIn" style="margin-top:12px"></div>
+          ${editing ? `<div class="hint">اترك الحقل فارغًا إذا بدك تغيّر رقم التمرين بس.</div>` : ''}
+        </div>
+        <div class="notice err" id="ferr" style="display:none;margin-top:12px"></div>
+        <div class="row" style="margin-top:18px"><button class="btn" id="sbtn">${editing ? 'حفظ التعديلات' : 'نشر التمرين'}</button></div>
+      </form>
+    </div>`;
+  let kind = editing ? w.kind : 'image';
+  const drawKind = () => {
+    $('#seg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.k === kind));
+    $('#kindIn').innerHTML = kind === 'link'
+      ? `<input class="in" id="url" type="url" dir="ltr" placeholder="https://…" value="${editing && w.kind === 'link' ? esc(w.url) : ''}"><div class="hint">مثال: رابط مشروع، رابط Canva، رابط محادثة أو موقع.</div>`
+      : `<input class="in" id="file" type="file" accept="${kind === 'image' ? 'image/png,image/jpeg,image/webp,image/gif' : 'application/pdf'}"><div class="hint">${kind === 'image' ? 'PNG أو JPG أو WEBP — يتم ضغط الصورة تلقائيًا.' : 'الحد الأقصى 10MB.'}</div>`;
+  };
+  drawKind();
+  $('#seg').querySelectorAll('button').forEach(b => b.onclick = () => { kind = b.dataset.k; drawKind(); });
+  $('#wf').onsubmit = async e => {
+    e.preventDefault();
+    const err = m => { $('#ferr').textContent = m; $('#ferr').style.display = ''; };
+    $('#ferr').style.display = 'none';
+    const exercise_no = parseInt($('#no').value, 10);
+    if (!(exercise_no >= 1 && exercise_no <= 999)) return err('اكتب رقم تمرين صحيح.');
+    let withContent = !editing;
+    if (editing) {
+      if (kind === 'link') { const v = ($('#url').value || '').trim(); withContent = !!v && !(w.kind === 'link' && v === w.url); }
+      else withContent = !!$('#file').files[0];
+    }
+    let data = { exercise_no };
+    if (withContent) {
+      data.kind = kind;
+      if (kind === 'link') {
+        const url = ($('#url').value || '').trim();
+        if (!/^https?:\/\/\S+\.\S+/i.test(url)) return err('اكتب رابطًا صحيحًا يبدأ بـ https://');
+        data.url = url;
+      } else {
+        const f = $('#file').files[0];
+        if (!f) return err('اختر ملفًا.');
+        if (kind === 'image' && !f.type.startsWith('image/')) return err('الملف المختار ليس صورة.');
+        if (kind === 'pdf' && f.type !== 'application/pdf') return err('الملف المختار ليس PDF.');
+        data.file = f;
+      }
+    }
+    const btn = $('#sbtn'); btn.disabled = true; btn.textContent = 'جاري الحفظ…';
+    try {
+      if (editing) { data.old = w; await api.updateWork(w.id, data); toast('تم حفظ التعديلات'); await refresh(false); location.hash = '#w-' + w.id; }
+      else { await api.addWork(data); toast('تم نشر التمرين 🎉'); await refresh(false); location.hash = '#u-' + me().id; }
+    } catch(er) { err(errMsg(er)); btn.disabled = false; btn.textContent = editing ? 'حفظ التعديلات' : 'نشر التمرين'; }
+  };
+}
+
+function viewMe(){
+  const u = me();
+  if (!u) return viewLogin();
+  const p = myProfile();
+  if (!p) return viewJoin();
+  $('#app').innerHTML = `
+    <div class="panel"><h2>ملفي الشخصي</h2>
+      <form id="pf">
+        <div class="row">${avatar(p,84)}<div><label for="av" style="margin-top:0">الصورة الشخصية</label><input id="av" type="file" accept="image/*"><div class="hint">مربعة يفضّل — يتم ضغطها تلقائيًا.</div></div></div>
+        <label for="fn">الاسم</label><input class="in" id="fn" maxlength="60" required value="${esc(p.full_name)}">
+        <label for="bio">نبذة قصيرة</label><textarea class="in" id="bio" maxlength="300" placeholder="عرّف عن نفسك في سطرين…">${esc(p.bio||'')}</textarea>
+        <div class="row" style="margin-top:16px"><button class="btn" id="pbtn">حفظ</button><a class="btn ghost" href="#u-${p.id}">عرض صفحتي</a></div>
+      </form>
+    </div>
+    <div class="panel danger"><h2>حذف الحساب</h2>
+      <p style="margin:0 0 12px">رح ينحذف ملفك الشخصي وكل أعمالك وتعليقاتك وتفاعلاتك نهائيًا. ما بتقدر ترجع للمنصة إلا برابط دعوة جديد.</p>
+      <button class="btn warn" id="delAcc">حذف حسابي نهائيًا</button>
+    </div>
+    <div class="hint">مسجّل الدخول بـ <span dir="ltr">${esc(u.email)}</span>${api.isAdmin() ? ' · <span class="chip admin">أدمن</span>' : ''}</div>`;
+  $('#delAcc').onclick = async () => {
+    if (!await confirmBox('متأكد إنك بدك تحذف حسابك؟ هاد الإجراء ما بينرجع عنه، وكل أعمالك وتعليقاتك رح تنحذف.', 'نعم، احذف حسابي')) return;
+    const b = $('#delAcc'); b.disabled = true; b.textContent = 'جاري الحذف…';
+    try { await api.deleteMyAccount(); toast('تم حذف حسابك'); location.hash = '#home'; await refresh(); }
+    catch(er) { toast(errMsg(er)); b.disabled = false; b.textContent = 'حذف حسابي نهائيًا'; }
+  };
+  $('#pf').onsubmit = async e => {
+    e.preventDefault();
+    const full_name = $('#fn').value.trim(); if (full_name.length < 2) return toast('اكتب اسمك');
+    const btn = $('#pbtn'); btn.disabled = true;
+    try { await api.saveProfile({ full_name, bio:$('#bio').value.trim() }, $('#av').files[0] || null); toast('تم الحفظ'); await refresh(); }
+    catch(er) { toast(errMsg(er)); btn.disabled = false; }
+  };
+}
+
+function viewLogin(){
+  if (me()) { location.hash = myProfile() ? '#me' : '#join'; return; }
+  $('#app').innerHTML = `
+    <div class="panel" style="max-width:480px;margin:10px auto">
+      <h2>دخول الأعضاء</h2>
+      ${pendingInvite ? `<div class="notice" style="margin-bottom:10px">لديك رابط دعوة. سجّل الدخول بنفس البريد الذي وصلتك عليه الدعوة.</div>` : ''}
+      <p class="hint" style="font-size:15px">اكتب بريدك الإلكتروني وسنرسل لك رابط دخول. افتح الرابط من بريدك فتدخل مباشرة بدون كلمة مرور.</p>
+      <form id="lf"><label for="em">البريد الإلكتروني</label><input class="in" id="em" type="email" dir="ltr" required placeholder="name@gmail.com">
+      <div class="row" style="margin-top:14px"><button class="btn" id="lbtn">${api.demo ? 'دخول (معاينة)' : 'أرسل رابط الدخول'}</button></div></form>
+      <div id="lmsg" style="margin-top:12px"></div>
+      <p class="hint">الزوار يستطيعون تصفح الموقع بدون تسجيل. النشر والتعليق للأعضاء المدعوين فقط.</p>
+    </div>`;
+  $('#lf').onsubmit = async e => {
+    e.preventDefault();
+    const email = $('#em').value.trim(), btn = $('#lbtn'); btn.disabled = true;
+    try {
+      const r = await api.sendLink(email, pendingInvite);
+      if (r !== 'demo') $('#lmsg').innerHTML = `<div class="notice">تم إرسال رابط الدخول إلى <b dir="ltr">${esc(email)}</b>. افتح بريدك (وتفقد مجلد Spam) واضغط على الرابط.</div>`;
+    } catch(er) { $('#lmsg').innerHTML = `<div class="notice err">${esc(errMsg(er))}</div>`; }
+    btn.disabled = false;
+  };
+}
+
+function viewJoin(){
+  const u = me();
+  if (!u) return viewLogin();
+  if (myProfile()) { location.hash = '#me'; return; }
+  const adm = api.isAdmin();
+  if (!pendingInvite && !adm) {
+    $('#app').innerHTML = `<div class="panel" style="max-width:520px;margin:10px auto"><h2>حسابك غير مدعو</h2>
+      <p>أنت مسجّل الدخول بـ <b dir="ltr">${esc(u.email)}</b>، لكن هذا البريد ليس عضوًا في المنصة.</p>
+      <div class="notice">الانضمام يتم فقط عن طريق رابط دعوة يرسله لك المدرب أو مسؤول المنصة على بريدك. افتح الرابط من الإيميل.</div>
+      <p class="hint">تقدر تتصفح المتدربين وأعمالهم كزائر.</p></div>`;
+    return;
+  }
+  $('#app').innerHTML = `<div class="panel" style="max-width:520px;margin:10px auto">
+    <h2>${adm && !pendingInvite ? 'إنشاء ملفك كأدمن' : 'أهلًا بك في صُنّاع AI 2 👋'}</h2>
+    <p class="hint" style="font-size:15px">${pendingInvite ? 'تم التحقق من رابط الدعوة. اكتب اسمك كما تريد أن يظهر للجميع.' : 'كأدمن تقدر تنشئ ملفًا شخصيًا لتنشر أعمالك أيضًا (اختياري).'}</p>
+    <form id="jf"><label for="jn">الاسم الكامل</label><input class="in" id="jn" maxlength="60" required>
+    <div class="row" style="margin-top:14px"><button class="btn" id="jbtn">إنشاء ملفي</button></div></form>
+    <div id="jmsg" style="margin-top:12px"></div></div>`;
+  $('#jf').onsubmit = async e => {
+    e.preventDefault();
+    const name = $('#jn').value.trim(); if (name.length < 2) return;
+    const btn = $('#jbtn'); btn.disabled = true;
+    try {
+      await api.join(pendingInvite, name);
+      clearInvite(); toast('تم إنشاء ملفك!');
+      await refresh(false); location.hash = '#me';
+    } catch(er) {
+      $('#jmsg').innerHTML = `<div class="notice err">${esc(errMsg(er))}</div>`; btn.disabled = false;
+      if (/INVITE_(USED|INVALID)/.test(String(er?.message))) clearInvite();
+    }
+  };
+}
+
+async function viewAdmin(){
+  if (!api.isAdmin()) return notFound('هذه الصفحة للمسؤولين فقط.');
+  $('#app').innerHTML = `
+    <div class="panel"><h2>دعوة متدرب جديد</h2>
+      <p class="hint" style="font-size:15px">اكتب بريد المتدرب. سيتم إنشاء رابط خاص به يعمل مرة واحدة فقط، ولا يقبله إلا نفس هذا البريد.</p>
+      <form id="inf" class="row"><input class="in" id="iem" type="email" dir="ltr" required placeholder="trainee@gmail.com" style="flex:1;min-width:220px"><button class="btn">إنشاء رابط دعوة</button></form>
+      <div id="iout"></div>
+    </div>
+    <div class="panel"><h2>الدعوات</h2><div id="ilist" class="hint">جاري التحميل…</div></div>
+    <div class="panel"><h2>الأعضاء (${S.profiles.length})</h2>
+      <table class="table"><tbody>${S.profiles.map(p => `<tr><td><a class="row" href="#u-${p.id}" style="color:inherit">${avatar(p,32)}<b>${esc(p.full_name)}</b></a></td><td style="color:var(--muted)">${S.works.filter(w=>w.user_id===p.id).length} عمل</td></tr>`).join('') || '<tr><td>لا يوجد أعضاء بعد.</td></tr>'}</tbody></table>
+      <p class="hint">لإزالة عضو افتح صفحته واضغط "إزالة العضو".</p>
+    </div>`;
+  const inviteLink = t => location.origin + location.pathname + '?invite=' + t;
+  const gmail = (email, link) => 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(email)
+    + '&su=' + encodeURIComponent('دعوة للانضمام إلى منصة صُنّاع AI 2 — Spark')
+    + '&body=' + encodeURIComponent(`مرحبًا،\n\nتمت دعوتك للانضمام إلى منصة "صُنّاع AI 2" لعرض تمارينك وتصاميمك مع متدربي سبارك.\n\nرابط الدعوة الخاص بك (يعمل مرة واحدة فقط ومع هذا البريد فقط):\n${link}\n\nافتح الرابط، اكتب بريدك هذا، ثم افتح رابط الدخول الذي سيصلك.\n\nبالتوفيق!`);
+  const showOut = inv => {
+    const link = inviteLink(inv.token);
+    $('#iout').innerHTML = `<div class="invite-out"><b>رابط الدعوة لـ <span dir="ltr">${esc(inv.email)}</span></b><code>${esc(link)}</code>
+      <div class="row"><a class="btn" href="${esc(gmail(inv.email, link))}" target="_blank" rel="noopener">إرسال عبر Gmail</a><button class="btn ghost" id="cpy">نسخ الرابط</button>
+      ${api.demo ? `<button class="btn ghost" id="tryInv">تجربة الرابط (معاينة)</button>` : ''}</div>
+      <div class="hint">زر Gmail يفتح رسالة جاهزة من بريدك — راجعها واضغط إرسال.</div></div>`;
+    $('#cpy').onclick = () => copy(link);
+    const t = $('#tryInv'); if (t) t.onclick = () => { pendingInvite = inv.token; api.switchTo(''); toast('سجّل الدخول ببريد الدعوة لتجربة الانضمام'); location.hash = '#login'; };
+  };
+  const drawInv = async () => {
+    let list; try { list = await api.invites(); } catch(e) { $('#ilist').innerHTML = `<div class="notice err">${esc(errMsg(e))}</div>`; return; }
+    $('#ilist').innerHTML = list.length ? `<table class="table"><thead><tr><th>البريد</th><th>الحالة</th><th></th></tr></thead><tbody>${list.map(i => `
+      <tr><td dir="ltr" style="text-align:right;word-break:break-all">${esc(i.email)}</td>
+      <td>${i.used_at ? `<span class="st ok">تم الانضمام</span>` : `<span class="st wait">بانتظار</span>`}<div class="hint" style="margin:2px 0 0">${fmtDate(i.created_at)}</div></td>
+      <td style="white-space:nowrap">${i.used_at ? '' : `<button class="btn ghost sm" data-show="${i.token}">الرابط</button> `}<button class="btn warn sm" data-del="${i.token}">حذف</button></td></tr>`).join('')}</tbody></table>`
+      : 'لا توجد دعوات بعد.';
+    $('#ilist').querySelectorAll('[data-show]').forEach(b => b.onclick = () => { showOut(list.find(i => i.token === b.dataset.show)); $('#iout').scrollIntoView({behavior:'smooth',block:'center'}); });
+    $('#ilist').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+      if (!await confirmBox('حذف هذه الدعوة؟ الرابط لن يعمل بعد الآن (لا يؤثر على عضو انضم مسبقًا).', 'حذف')) return;
+      try { await api.delInvite(b.dataset.del); drawInv(); } catch(e) { toast(errMsg(e)); }
+    });
+  };
+  drawInv();
+  $('#inf').onsubmit = async e => {
+    e.preventDefault();
+    const email = $('#iem').value.trim().toLowerCase();
+    try { const inv = await api.createInvite(email); showOut(inv); $('#iem').value = ''; drawInv(); } catch(er) { toast(errMsg(er)); }
+  };
+}
+
+function notFound(msg){ $('#app').innerHTML = `<div class="empty">${esc(msg)}<br><br><a class="btn ghost" href="#home">الرئيسية</a></div>`; }
+
+/* ---------- router ---------- */
+function route(){
+  $('#nav').classList.remove('open');
+  const h = location.hash.replace(/^#/, '');
+  window.scrollTo(0, 0);
+  if (!S.loaded) return;
+  if (!h || h === 'home') return viewHome();
+  if (h.startsWith('u-')) return viewProfile(h.slice(2));
+  if (h.startsWith('w-')) return viewWork(h.slice(2));
+  if (h === 'login') return viewLogin();
+  if (h === 'join') return viewJoin();
+  if (h === 'me') return viewMe();
+  if (h === 'admin') return viewAdmin();
+  if (h === 'add') { if (!myProfile()) return viewMe(); return workForm(null); }
+  if (h.startsWith('edit-')) {
+    const w = S.works.find(x => x.id === h.slice(5));
+    if (!w || (w.user_id !== me()?.id && !api.isAdmin())) return notFound('لا يمكنك تعديل هذا العمل.');
+    return workForm(w);
+  }
+  viewHome();
+}
+async function refresh(rerender=true){
+  try { await loadAll(); }
+  catch(e) { $('#app').innerHTML = `<div class="notice err">تعذّر تحميل البيانات: ${esc(errMsg(e))}</div>`; return; }
+  renderNav(); renderDemoBar();
+  if (rerender) route();
+}
+function clearInvite(){
+  pendingInvite = null;
+  try { localStorage.removeItem('spark_pending_invite'); } catch(e) {}
+  if (location.search.includes('invite=')) history.replaceState(null, '', location.pathname + location.hash);
+}
+
+async function start(){
+  $('#menuBtn').onclick = () => $('#nav').classList.toggle('open');
+  // رابط الدعوة ?invite=TOKEN
+  const qs = new URLSearchParams(location.search);
+  try { pendingInvite = qs.get('invite') || localStorage.getItem('spark_pending_invite') || null; if (pendingInvite) localStorage.setItem('spark_pending_invite', pendingInvite); } catch(e) { pendingInvite = qs.get('invite'); }
+  if (DEMO) api = MockApi();
+  else {
+    await new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'; s.onload = res; s.onerror = rej; document.head.appendChild(s); })
+      .catch(() => { $('#app').innerHTML = '<div class="notice err">تعذّر تحميل مكتبة Supabase. تحقق من الاتصال.</div>'; throw new Error('lib'); });
+    api = SupaApi();
+  }
+  await api.init();
+  // تنظيف بقايا رابط الدخول من العنوان
+  if (/access_token|error_description|error=/.test(location.hash)) {
+    const m = decodeURIComponent((location.hash.match(/error_description=([^&]+)/) || [])[1] || '').replace(/\+/g,' ');
+    history.replaceState(null, '', location.pathname + location.search);
+    if (m) toast('رابط الدخول منتهي أو غير صالح، اطلب رابطًا جديدًا');
+  }
+  api.onChange(async () => { await refresh(false); route(); });
+  await refresh(false);
+  if (pendingInvite && !myProfile()) location.hash = me() ? '#join' : '#login';
+  route();
+  window.addEventListener('hashchange', route);
+}
+start();
+</script>
+</body>
+</html>
