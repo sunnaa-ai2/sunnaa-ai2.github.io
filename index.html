@@ -289,6 +289,12 @@ function MockApi(){
   const isMember = () => !!me() && db.profiles.some(p => p.id === db.session);
   const need = c => { if (!c) throw new Error('FORBIDDEN'); };
   const fire = () => listener && setTimeout(listener, 0);
+  const signIn = email => {
+    email = email.trim().toLowerCase();
+    let u = db.users.find(x => x.email === email);
+    if (!u) { u = {id:rid(), email}; db.users.push(u); }
+    db.session = u.id; save(); fire();
+  };
   async function fileToUrl(file, kind){
     if (kind === 'image') return toDataUrl(await compressImage(file, 1000, .8));
     if (file.size > 3*1024*1024) throw new Error('في وضع المعاينة الحد الأقصى لملف PDF هو 3MB');
@@ -308,18 +314,7 @@ function MockApi(){
     onChange(cb){ listener = cb; },
     user: () => { const u = me(); return u ? {id:u.id, email:u.email} : null; },
     isAdmin,
-    async signIn(email, pw){
-      const u = db.users.find(x => x.email === email.trim().toLowerCase());
-      if (!u || (u.pw || 'demo1234') !== pw) throw new Error('Invalid login credentials');
-      db.session = u.id; save(); fire();
-    },
-    async signUp(email, pw){
-      email = email.trim().toLowerCase();
-      if (db.users.some(x => x.email === email)) throw new Error('User already registered');
-      const u = {id:rid(), email, pw}; db.users.push(u); db.session = u.id; save(); fire();
-    },
-    async changePassword(pw){ const u = db.users.find(x => x.id === db.session); need(u); u.pw = pw; save(); },
-    async adminSetPassword(id, pw){ need(isAdmin()); const u = db.users.find(x => x.id === id); need(u); u.pw = pw; save(); },
+    async sendLink(email){ signIn(email); return 'demo'; },
     async logout(){ db.session = null; save(); fire(); },
     async profiles(){ return [...db.profiles].sort((a,b)=>a.created_at.localeCompare(b.created_at)); },
     async works(){ return [...db.works].sort((a,b)=>a.created_at.localeCompare(b.created_at)); },
@@ -426,13 +421,10 @@ function SupaApi(){
     onChange(cb){ listener = cb; },
     user: () => user,
     isAdmin: () => admin,
-    async signIn(email, pw){ chk(await sb.auth.signInWithPassword({ email:email.trim().toLowerCase(), password:pw })); },
-    async signUp(email, pw){
-      const d = chk(await sb.auth.signUp({ email:email.trim().toLowerCase(), password:pw }));
-      if (!d.session) { if (d.user && !(d.user.identities || []).length) throw new Error('User already registered'); throw new Error('EMAIL_CONFIRM_ON'); }
+    async sendLink(email, token){
+      const redirect = location.origin + location.pathname + (token ? '?invite=' + encodeURIComponent(token) : '');
+      chk(await sb.auth.signInWithOtp({ email:email.trim().toLowerCase(), options:{ emailRedirectTo: redirect, shouldCreateUser:true } }));
     },
-    async changePassword(pw){ chk(await sb.auth.updateUser({ password:pw })); },
-    async adminSetPassword(id, pw){ chk(await sb.rpc('admin_set_password', { p_user:id, p_password:pw })); },
     async logout(){ await sb.auth.signOut(); },
     async profiles(){ return chk(await sb.from('profiles').select('*').order('created_at')); },
     async works(){ return chk(await sb.from('works').select('*').order('created_at')); },
@@ -473,8 +465,8 @@ function SupaApi(){
       const paths = (await sb.from('works').select('file_path').eq('user_id', id)).data?.map(r => r.file_path).filter(Boolean) || [];
       const av = (await sb.from('profiles').select('avatar_url').eq('id', id).single()).data?.avatar_url;
       const avp = av && av.split('/uploads/')[1]; if (avp) paths.push(decodeURIComponent(avp));
+      chk(await sb.from('profiles').delete().eq('id', id));
       if (paths.length) await sb.storage.from('uploads').remove(paths);
-      chk(await sb.rpc('admin_delete_member', { p_user:id }));
     },
     async deleteMyAccount(){
       const paths = (await sb.from('works').select('file_path').eq('user_id', user.id)).data?.map(r => r.file_path).filter(Boolean) || [];
@@ -503,15 +495,7 @@ function errMsg(e){
     INVITE_REQUIRED:'لا يمكنك الانضمام بدون رابط دعوة.',
     NOT_LOGGED_IN:'يجب تسجيل الدخول أولًا.',
     FORBIDDEN:'ليس لديك صلاحية لهذا الإجراء.',
-    'Invalid login credentials':'الإيميل أو كلمة المرور غلط.',
-    'User already registered':'هذا البريد عنده حساب مسبقًا. اختار "تسجيل الدخول".',
-    'already been registered':'هذا البريد عنده حساب مسبقًا. اختار "تسجيل الدخول".',
-    'Email not confirmed':'تأكيد البريد مفعّل في إعدادات Supabase. يجب إيقاف خيار Confirm email.',
-    'EMAIL_CONFIRM_ON':'تأكيد البريد مفعّل في إعدادات Supabase. يجب إيقاف خيار Confirm email.',
-    'WEAK_PASSWORD':'كلمة المرور لازم تكون 8 أحرف أو أكثر.',
-    'Password should be':'كلمة المرور ضعيفة، استخدم 8 أحرف أو أكثر.',
-    'CANNOT_DELETE_SELF':'ما بتقدر تحذف حسابك من هون، استخدم صفحة حسابي.',
-    'rate limit':'محاولات كثيرة، حاول بعد قليل.',
+    'rate limit':'تم إرسال عدد كبير من الرسائل، حاول بعد قليل.',
     'duplicate key':'هذا العنصر موجود مسبقًا.',
   };
   for (const k in map) if (m.includes(k)) return map[k];
@@ -786,19 +770,11 @@ function viewMe(){
         <div class="row" style="margin-top:16px"><button class="btn" id="pbtn">حفظ</button><a class="btn ghost" href="#u-${p.id}">عرض صفحتي</a></div>
       </form>
     </div>
-    <div class="panel"><h2>تغيير كلمة المرور</h2>
-      <form id="cpf" class="row"><input class="in" id="npw" type="password" dir="ltr" minlength="8" required placeholder="كلمة المرور الجديدة (8 أحرف أو أكثر)" autocomplete="new-password" style="flex:1;min-width:200px"><button class="btn ghost">تغيير</button></form>
-    </div>
     <div class="panel danger"><h2>حذف الحساب</h2>
       <p style="margin:0 0 12px">رح ينحذف ملفك الشخصي وكل أعمالك وتعليقاتك وتفاعلاتك نهائيًا. ما بتقدر ترجع للمنصة إلا برابط دعوة جديد.</p>
       <button class="btn warn" id="delAcc">حذف حسابي نهائيًا</button>
     </div>
     <div class="hint">مسجّل الدخول بـ <span dir="ltr">${esc(u.email)}</span>${api.isAdmin() ? ' · <span class="chip admin">أدمن</span>' : ''}</div>`;
-  $('#cpf').onsubmit = async e => {
-    e.preventDefault(); const pw = $('#npw').value;
-    if (pw.length < 8) return toast('كلمة المرور لازم تكون 8 أحرف أو أكثر');
-    try { await api.changePassword(pw); $('#npw').value = ''; toast('تم تغيير كلمة المرور'); } catch(er) { toast(errMsg(er)); }
-  };
   $('#delAcc').onclick = async () => {
     if (!await confirmBox('متأكد إنك بدك تحذف حسابك؟ هاد الإجراء ما بينرجع عنه، وكل أعمالك وتعليقاتك رح تنحذف.', 'نعم، احذف حسابي')) return;
     const b = $('#delAcc'); b.disabled = true; b.textContent = 'جاري الحذف…';
@@ -816,52 +792,25 @@ function viewMe(){
 
 function viewLogin(){
   if (me()) { location.hash = myProfile() ? '#me' : '#join'; return; }
-  let mode = pendingInvite ? 'up' : 'in';
   $('#app').innerHTML = `
     <div class="panel" style="max-width:480px;margin:10px auto">
-      <div class="seg" id="lseg" style="margin-bottom:6px"><button type="button" data-m="in">تسجيل الدخول</button><button type="button" data-m="up">إنشاء حساب</button></div>
-      <div id="lnote"></div>
-      <form id="lf">
-        <label for="em">البريد الإلكتروني</label><input class="in" id="em" type="email" dir="ltr" required autocomplete="email" placeholder="name@gmail.com">
-        <label for="pw">كلمة المرور</label><input class="in" id="pw" type="password" dir="ltr" required minlength="8" autocomplete="current-password">
-        <div id="pw2box"><label for="pw2">تأكيد كلمة المرور</label><input class="in" id="pw2" type="password" dir="ltr" minlength="8" autocomplete="new-password"></div>
-        <div class="row" style="margin-top:14px"><button class="btn" id="lbtn"></button></div>
-      </form>
+      <h2>دخول الأعضاء</h2>
+      ${pendingInvite ? `<div class="notice" style="margin-bottom:10px">لديك رابط دعوة. سجّل الدخول بنفس البريد الذي وصلتك عليه الدعوة.</div>` : ''}
+      <p class="hint" style="font-size:15px">اكتب بريدك الإلكتروني وسنرسل لك رابط دخول. افتح الرابط من بريدك فتدخل مباشرة بدون كلمة مرور.</p>
+      <form id="lf"><label for="em">البريد الإلكتروني</label><input class="in" id="em" type="email" dir="ltr" required placeholder="name@gmail.com">
+      <div class="row" style="margin-top:14px"><button class="btn" id="lbtn">${api.demo ? 'دخول (معاينة)' : 'أرسل رابط الدخول'}</button></div></form>
       <div id="lmsg" style="margin-top:12px"></div>
-      <p class="hint">نسيت كلمة المرور؟ تواصل مع المدرب أو مسؤول المنصة ليعيّن لك كلمة جديدة.<br>الزوار يستطيعون تصفح الموقع بدون تسجيل.</p>
+      <p class="hint">الزوار يستطيعون تصفح الموقع بدون تسجيل. النشر والتعليق للأعضاء المدعوين فقط.</p>
     </div>`;
-  const draw = () => {
-    $('#lseg').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.m === mode));
-    $('#pw2box').style.display = mode === 'up' ? '' : 'none';
-    $('#pw2').required = mode === 'up';
-    $('#pw').autocomplete = mode === 'up' ? 'new-password' : 'current-password';
-    $('#lbtn').textContent = mode === 'up' ? 'إنشاء الحساب' : 'دخول';
-    $('#lnote').innerHTML = mode === 'up'
-      ? `<div class="notice" style="margin:8px 0">${pendingInvite ? 'وصلتك دعوة 🎉 اعمل حسابك بنفس البريد اللي وصلتك عليه الدعوة.' : 'إنشاء الحساب مفيد فقط إذا وصلتك دعوة أو كنت مسؤولًا. افتح رابط الدعوة من بريدك أولًا.'}</div>`
-      : (pendingInvite ? `<div class="notice" style="margin:8px 0">لديك رابط دعوة. إذا عندك حساب ادخل فيه، وإلا اختار "إنشاء حساب".</div>` : '');
-    $('#lmsg').innerHTML = '';
-  };
-  draw();
-  $('#lseg').querySelectorAll('button').forEach(b => b.onclick = () => { mode = b.dataset.m; draw(); });
   $('#lf').onsubmit = async e => {
     e.preventDefault();
-    const email = $('#em').value.trim(), pw = $('#pw').value, btn = $('#lbtn');
-    if (pw.length < 8) { $('#lmsg').innerHTML = `<div class="notice err">كلمة المرور لازم تكون 8 أحرف أو أكثر.</div>`; return; }
-    if (mode === 'up' && pw !== $('#pw2').value) { $('#lmsg').innerHTML = `<div class="notice err">كلمتا المرور غير متطابقتين.</div>`; return; }
-    btn.disabled = true;
-    try { mode === 'up' ? await api.signUp(email, pw) : await api.signIn(email, pw); }
-    catch(er) { $('#lmsg').innerHTML = `<div class="notice err">${esc(errMsg(er))}</div>`; }
+    const email = $('#em').value.trim(), btn = $('#lbtn'); btn.disabled = true;
+    try {
+      const r = await api.sendLink(email, pendingInvite);
+      if (r !== 'demo') $('#lmsg').innerHTML = `<div class="notice">تم إرسال رابط الدخول إلى <b dir="ltr">${esc(email)}</b>. افتح بريدك (وتفقد مجلد Spam) واضغط على الرابط.</div>`;
+    } catch(er) { $('#lmsg').innerHTML = `<div class="notice err">${esc(errMsg(er))}</div>`; }
     btn.disabled = false;
   };
-}
-function promptBox(msg, okText='حفظ'){
-  return new Promise(res => {
-    const bg = document.createElement('div'); bg.className = 'modal-bg';
-    bg.innerHTML = `<div class="modal"><p>${esc(msg)}</p><input class="in" type="text" dir="ltr" minlength="8" style="margin-bottom:14px"><div class="row"><button class="btn" data-ok>${esc(okText)}</button><button class="btn ghost" data-no>إلغاء</button></div></div>`;
-    const inp = bg.querySelector('input');
-    bg.onclick = e => { if (e.target === bg || e.target.dataset.no !== undefined) { bg.remove(); res(null); } if (e.target.dataset.ok !== undefined) { bg.remove(); res(inp.value); } };
-    document.body.appendChild(bg); inp.focus();
-  });
 }
 
 function viewJoin(){
@@ -907,20 +856,13 @@ async function viewAdmin(){
     </div>
     <div class="panel"><h2>الدعوات</h2><div id="ilist" class="hint">جاري التحميل…</div></div>
     <div class="panel"><h2>الأعضاء (${S.profiles.length})</h2>
-      <table class="table"><tbody>${S.profiles.map(p => `<tr><td><a class="row" href="#u-${p.id}" style="color:inherit">${avatar(p,32)}<b>${esc(p.full_name)}</b></a></td><td style="color:var(--muted)">${S.works.filter(w=>w.user_id===p.id).length} عمل</td><td style="text-align:left">${p.id !== me()?.id ? `<button class="btn ghost sm" data-pw="${p.id}">كلمة مرور جديدة</button>` : ''}</td></tr>`).join('') || '<tr><td>لا يوجد أعضاء بعد.</td></tr>'}</tbody></table>
-      <p class="hint">لإزالة عضو افتح صفحته واضغط "إزالة العضو". إذا نسي متدرب كلمة المرور اضغط "كلمة مرور جديدة" وأعطه إياها.</p>
+      <table class="table"><tbody>${S.profiles.map(p => `<tr><td><a class="row" href="#u-${p.id}" style="color:inherit">${avatar(p,32)}<b>${esc(p.full_name)}</b></a></td><td style="color:var(--muted)">${S.works.filter(w=>w.user_id===p.id).length} عمل</td></tr>`).join('') || '<tr><td>لا يوجد أعضاء بعد.</td></tr>'}</tbody></table>
+      <p class="hint">لإزالة عضو افتح صفحته واضغط "إزالة العضو".</p>
     </div>`;
-  $('#app').querySelectorAll('[data-pw]').forEach(b => b.onclick = async () => {
-    const p = prof(b.dataset.pw);
-    const pw = await promptBox(`اكتب كلمة مرور جديدة لـ ${p?.full_name || 'العضو'} (8 أحرف أو أكثر)، وأعطه إياها:`);
-    if (pw == null) return;
-    if (pw.length < 8) return toast('كلمة المرور لازم تكون 8 أحرف أو أكثر');
-    try { await api.adminSetPassword(b.dataset.pw, pw); toast('تم تعيين كلمة المرور الجديدة'); } catch(e) { toast(errMsg(e)); }
-  });
   const inviteLink = t => location.origin + location.pathname + '?invite=' + t;
   const gmail = (email, link) => 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(email)
     + '&su=' + encodeURIComponent('دعوة للانضمام إلى منصة صُنّاع AI 2 — Spark')
-    + '&body=' + encodeURIComponent(`مرحبًا،\n\nتمت دعوتك للانضمام إلى منصة "صُنّاع AI 2" لعرض تمارينك وتصاميمك مع متدربي سبارك.\n\nرابط الدعوة الخاص بك (يعمل مرة واحدة فقط ومع هذا البريد فقط):\n${link}\n\nافتح الرابط، اختر "إنشاء حساب" واكتب بريدك هذا وكلمة مرور من اختيارك، ثم اكتب اسمك.\n\nبالتوفيق!`);
+    + '&body=' + encodeURIComponent(`مرحبًا،\n\nتمت دعوتك للانضمام إلى منصة "صُنّاع AI 2" لعرض تمارينك وتصاميمك مع متدربي سبارك.\n\nرابط الدعوة الخاص بك (يعمل مرة واحدة فقط ومع هذا البريد فقط):\n${link}\n\nافتح الرابط، اكتب بريدك هذا، ثم افتح رابط الدخول الذي سيصلك.\n\nبالتوفيق!`);
   const showOut = inv => {
     const link = inviteLink(inv.token);
     $('#iout').innerHTML = `<div class="invite-out"><b>رابط الدعوة لـ <span dir="ltr">${esc(inv.email)}</span></b><code>${esc(link)}</code>
