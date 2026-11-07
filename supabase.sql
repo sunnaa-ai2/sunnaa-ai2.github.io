@@ -209,3 +209,76 @@ create policy up_del on storage.objects for delete to authenticated
 
 -- لإضافة مسؤول جديد لاحقًا:
 -- insert into public.admins (email) values ('new.admin@gmail.com');
+
+
+-- ---------------------------------------------------------------------
+--  صفحات التمارين (وصف يكتبه المدرب) + الإشعارات
+-- ---------------------------------------------------------------------
+create table if not exists public.exercises (
+  no          int primary key check (no between 1 and 999),
+  title       text check (title is null or char_length(title) <= 120),
+  description text check (description is null or char_length(description) <= 3000),
+  updated_at  timestamptz not null default now()
+);
+alter table public.exercises enable row level security;
+drop policy if exists ex_sel on public.exercises;
+drop policy if exists ex_ins on public.exercises;
+drop policy if exists ex_upd on public.exercises;
+create policy ex_sel on public.exercises for select using (true);
+create policy ex_ins on public.exercises for insert to authenticated with check (public.is_admin());
+create policy ex_upd on public.exercises for update to authenticated using (public.is_admin()) with check (public.is_admin());
+
+create table if not exists public.notifications (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references public.profiles(id) on delete cascade,
+  actor_id    uuid references public.profiles(id) on delete cascade,
+  kind        text not null check (kind in ('like','comment')),
+  work_id     uuid references public.works(id) on delete cascade,
+  created_at  timestamptz not null default now(),
+  read_at     timestamptz
+);
+create index if not exists notifications_user_idx on public.notifications(user_id, created_at desc);
+create index if not exists notifications_actor_idx on public.notifications(actor_id);
+create index if not exists notifications_work_idx on public.notifications(work_id);
+alter table public.notifications enable row level security;
+drop policy if exists n_sel on public.notifications;
+drop policy if exists n_upd on public.notifications;
+create policy n_sel on public.notifications for select to authenticated using (user_id = (select auth.uid()));
+create policy n_upd on public.notifications for update to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+
+create or replace function public.notify_on_reaction() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_owner uuid;
+begin
+  if new.value <> 1 then return new; end if;
+  if tg_op = 'UPDATE' and old.value = 1 then return new; end if;
+  select user_id into v_owner from public.works where id = new.work_id;
+  if v_owner is not null and v_owner <> new.user_id then
+    insert into public.notifications (user_id, actor_id, kind, work_id)
+    select v_owner, new.user_id, 'like', new.work_id
+    where not exists (select 1 from public.notifications n where n.user_id = v_owner and n.actor_id = new.user_id and n.work_id = new.work_id and n.kind = 'like');
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.notify_on_comment() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare v_owner uuid;
+begin
+  select user_id into v_owner from public.works where id = new.work_id;
+  if v_owner is not null and v_owner <> new.user_id then
+    insert into public.notifications (user_id, actor_id, kind, work_id) values (v_owner, new.user_id, 'comment', new.work_id);
+  end if;
+  return new;
+end;
+$$;
+revoke all on function public.notify_on_reaction() from public, anon, authenticated;
+revoke all on function public.notify_on_comment() from public, anon, authenticated;
+
+drop trigger if exists trg_notify_reaction on public.reactions;
+create trigger trg_notify_reaction after insert or update on public.reactions
+  for each row execute function public.notify_on_reaction();
+drop trigger if exists trg_notify_comment on public.comments;
+create trigger trg_notify_comment after insert on public.comments
+  for each row execute function public.notify_on_comment();
