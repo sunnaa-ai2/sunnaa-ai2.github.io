@@ -411,6 +411,8 @@ function SupaApi(){
       const m = /\.([a-z0-9]{1,10})$/i.exec(file.name || '');
       ext = m ? m[1].toLowerCase() : 'bin';
       type = file.type || 'application/octet-stream';
+      // ملفات قد تُشغَّل كصفحة في المتصفح (HTML/SVG/JS…) تُرفع كتنزيل فقط، للأمان
+      if (/html|svg|xml|javascript|ecmascript/i.test(type) || /^(html?|svg|xhtml|xml|js|mjs)$/.test(ext)) type = 'application/octet-stream';
     }
     const path = `${user.id}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
     chk(await sb.storage.from('uploads').upload(path, blob, { contentType:type, upsert:false }));
@@ -446,8 +448,13 @@ function SupaApi(){
     async delComment(id){ chk(await sb.from('comments').delete().eq('id', id)); },
     async saveProfile(fields, avatar){
       const upd = { ...fields };
-      if (avatar) upd.avatar_url = (await upload(avatar, 'avatar')).url;
+      let oldAvatar = null;
+      if (avatar) {
+        oldAvatar = (await sb.from('profiles').select('avatar_url').eq('id', user.id).single()).data?.avatar_url;
+        upd.avatar_url = (await upload(avatar, 'avatar')).url;
+      }
       chk(await sb.from('profiles').update(upd).eq('id', user.id));
+      const op = oldAvatar && oldAvatar.split('/uploads/')[1]; if (op) await rmFile(decodeURIComponent(op));
     },
     async addWork({exercise_no, kind, url, file}){
       let file_path = null;
