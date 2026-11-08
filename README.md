@@ -14,3 +14,6 @@
 
 ## الهوية
 هوية "المختبر": خلفية سوداء بشبكة خفيفة، والأحمر (#FF2E3B) إشارة للإجراءات فقط. الخطوط: Alexandria للعناوين، IBM Plex Sans Arabic للنصوص، IBM Plex Mono للتسميات.
+
+## الباك اند (Laravel + MySQL)
+في مجلد [`backend/`](backend/README.md): API كامل بـ Laravel 12 وMySQL، مع اختبارات تعمل على GitHub Actions ودليل نشر. الموقع يبقى على Supabase إلى أن يُنشر الباك اند ويُغيَّر `BACKEND` في `index.html` إلى `"laravel"`.

@@ -1,0 +1,24 @@
+<?php
+
+return [
+    // Comma-separated e-mails that act as admins (send invites, edit exercises, remove members).
+    'admins' => array_values(array_filter(array_map(
+        fn ($e) => strtolower(trim($e)),
+        explode(',', (string) env('ADMIN_EMAILS', ''))
+    ))),
+
+    // Where the static site lives; login links in e-mails point here.
+    'frontend_url' => env('FRONTEND_URL', 'https://sunnaa-ai2.github.io'),
+
+    // Minutes a login link stays valid.
+    'login_ttl' => (int) env('LOGIN_LINK_TTL', 30),
+
+    // Days an API token stays valid.
+    'token_days' => (int) env('API_TOKEN_DAYS', 30),
+
+    // Disk for uploads: "local" for a persistent server, "s3" for Supabase Storage / any S3 bucket.
+    'disk' => env('FILES_DISK', 'local'),
+
+    // Max upload size in kilobytes (default 50 MB).
+    'max_upload_kb' => (int) env('MAX_UPLOAD_KB', 51200),
+];

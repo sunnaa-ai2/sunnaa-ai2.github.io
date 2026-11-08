@@ -732,12 +732,18 @@ footer.ft .wrap{display:block!important}
    إذا تُركت فارغة يعمل الموقع في "وضع المعاينة" ببيانات تجريبية.
    ========================================================= */
 const CONFIG = {
+  // أي باك اند يستخدمه الموقع: "supabase" أو "laravel"
+  BACKEND: "supabase",
+  // Supabase
   SUPABASE_URL: "https://vsxqdumhodkmnbuwwdte.supabase.co",       // مثال: https://abcdxyz.supabase.co
-  SUPABASE_ANON_KEY: "sb_publishable_CvEh2JQDsicoT7kpITSWyQ_fstuwcGs"   // المفتاح العام (anon public key)
+  SUPABASE_ANON_KEY: "sb_publishable_CvEh2JQDsicoT7kpITSWyQ_fstuwcGs",   // المفتاح العام (anon public key)
+  // Laravel (مجلد backend/ في المستودع) — رابط السيرفر بدون /api في آخره
+  LARAVEL_API_URL: ""     // مثال: https://sunnaa.alwaysdata.net
 };
 /* ========================================================= */
 
-const DEMO = !CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY;
+const USE_LARAVEL = CONFIG.BACKEND === 'laravel' && !!CONFIG.LARAVEL_API_URL;
+const DEMO = !USE_LARAVEL && (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY);
 const COLORS = ['#ff2e3b','#00bc3a','#ffcc00','#4da3ff','#ff8022','#b06cff'];
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1073,6 +1079,103 @@ function SupaApi(){
   };
 }
 
+
+/* =========================================================
+   Backend 3: Laravel API (backend/ في المستودع)
+   الدخول برابط على الإيميل ← توكن Sanctum يُحفظ في المتصفح ويُرسل مع كل طلب
+   ========================================================= */
+function LaravelApi(){
+  const base = CONFIG.LARAVEL_API_URL.replace(/\/+$/, '') + '/api';
+  const TK = 'spark_api_token';
+  let token = null, user = null, admin = false, listener = null;
+  try { token = localStorage.getItem(TK); } catch(e) {}
+  const saveToken = t => { token = t; try { t ? localStorage.setItem(TK, t) : localStorage.removeItem(TK); } catch(e) {} };
+  async function req(method, path, body){
+    const headers = { Accept:'application/json' };
+    if (token) headers.Authorization = 'Bearer ' + token;
+    let payload = body;
+    if (body && !(body instanceof FormData)) { headers['Content-Type'] = 'application/json'; payload = JSON.stringify(body); }
+    let res;
+    try { res = await fetch(base + path, { method, headers, body: payload }); }
+    catch(e) { throw new Error('تعذّر الاتصال بالسيرفر. قد يكون في وضع السكون، حاول بعد دقيقة.'); }
+    if (res.status === 401 && token) { saveToken(null); user = null; admin = false; listener && setTimeout(listener, 0); }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const first = data.errors ? Object.values(data.errors)[0]?.[0] : '';
+      throw new Error(data.message && !/^The given data/.test(data.message) ? data.message : (first || ('HTTP ' + res.status)));
+    }
+    return data;
+  }
+  async function loadMe(){
+    user = null; admin = false;
+    if (!token) return;
+    try { const d = await req('GET', '/me'); user = { id:d.user.id, email:(d.user.email || '').toLowerCase() }; admin = !!d.is_admin; }
+    catch(e) { if (!token) return; }
+  }
+  async function prep(kind, file){
+    if (kind === 'image' || kind === 'avatar') {
+      const blob = await compressImage(file, kind === 'avatar' ? 400 : 1600, .85);
+      return new File([blob], (kind === 'avatar' ? 'avatar' : 'image') + (blob.type === 'image/gif' ? '.gif' : '.jpg'), { type: blob.type || 'image/jpeg' });
+    }
+    if (file.size > 50*1024*1024) throw new Error('حجم الملف أكبر من 50MB');
+    return file;
+  }
+  const fire = () => listener && setTimeout(listener, 0);
+  return {
+    demo: false,
+    async init(){
+      // رابط الدخول من الإيميل: ?login=TOKEN
+      const qs = new URLSearchParams(location.search), login = qs.get('login');
+      if (login) {
+        qs.delete('login');
+        history.replaceState(null, '', location.pathname + (qs.toString() ? '?' + qs : '') + location.hash);
+        try { const d = await req('POST', '/auth/verify', { token: login }); saveToken(d.token); }
+        catch(e) { setTimeout(() => toast('رابط الدخول منتهي أو مستخدم، اطلب رابطًا جديدًا'), 300); }
+      }
+      await loadMe();
+    },
+    onChange(cb){ listener = cb; },
+    user: () => user,
+    isAdmin: () => admin,
+    async sendLink(email, invite){ await req('POST', '/auth/link', { email: email.trim().toLowerCase(), invite: invite || null }); },
+    async logout(){ try { await req('POST', '/auth/logout'); } catch(e) {} saveToken(null); user = null; admin = false; fire(); },
+    profiles: () => req('GET', '/profiles'),
+    works: () => req('GET', '/works'),
+    reactions: () => req('GET', '/reactions'),
+    commentRows: () => req('GET', '/comments/rows'),
+    exercises: () => req('GET', '/exercises'),
+    notifications: () => user ? req('GET', '/notifications') : Promise.resolve([]),
+    async markNotifsRead(){ if (user) await req('POST', '/notifications/read'); },
+    comments: workId => req('GET', `/works/${workId}/comments`),
+    async react(workId, value){ await req('PUT', `/works/${workId}/reaction`, { value }); },
+    async addComment(workId, body){ await req('POST', `/works/${workId}/comments`, { body }); },
+    async delComment(id){ await req('DELETE', `/comments/${id}`); },
+    async saveProfile(fields, avatar){
+      const fd = new FormData(); fd.append('full_name', fields.full_name); fd.append('bio', fields.bio || '');
+      if (avatar) fd.append('avatar', await prep('avatar', avatar));
+      await req('POST', '/me/profile', fd);
+    },
+    async addWork({exercise_no, kind, url, file}){
+      const fd = new FormData(); fd.append('exercise_no', exercise_no); fd.append('kind', kind);
+      if (kind === 'link') fd.append('url', url); else fd.append('file', await prep(kind, file));
+      await req('POST', '/works', fd);
+    },
+    async updateWork(id, {exercise_no, kind, url, file}){
+      const fd = new FormData(); fd.append('exercise_no', exercise_no);
+      if (kind) { fd.append('kind', kind); if (kind === 'link') fd.append('url', url); else fd.append('file', await prep(kind, file)); }
+      await req('POST', `/works/${id}`, fd);
+    },
+    async delWork(w){ await req('DELETE', `/works/${w.id}`); },
+    async join(tok, name){ await req('POST', '/join', { token: tok || null, name }); },
+    invites: () => req('GET', '/admin/invites'),
+    createInvite: email => req('POST', '/admin/invites', { email: email.trim().toLowerCase() }),
+    async delInvite(tok){ await req('DELETE', `/admin/invites/${tok}`); },
+    async delMember(id){ await req('DELETE', `/admin/members/${id}`); },
+    async deleteMyAccount(){ await req('DELETE', '/me'); saveToken(null); user = null; admin = false; fire(); },
+    async saveExercise(no, title, description){ await req('PUT', `/admin/exercises/${no}`, { title, description }); },
+  };
+}
+
 /* =========================================================
    الحالة والواجهة
    ========================================================= */
@@ -1089,6 +1192,10 @@ function errMsg(e){
     INVITE_REQUIRED:'لا يمكنك الانضمام بدون رابط دعوة.',
     NOT_LOGGED_IN:'يجب تسجيل الدخول أولًا.',
     FORBIDDEN:'ليس لديك صلاحية لهذا الإجراء.',
+    LOGIN_LINK_INVALID:'رابط الدخول منتهي أو مستخدم، اطلب رابطًا جديدًا.',
+    NOT_MEMBER:'هذا الحساب ليس عضوًا بعد. افتح رابط الدعوة من بريدك أولًا.',
+    CANNOT_DELETE_SELF:'لا يمكنك حذف حسابك من هنا، استخدم صفحة حسابي.',
+    'Too Many Attempts':'محاولات كثيرة، حاول بعد دقيقة.',
     'rate limit':'تم إرسال عدد كبير من الرسائل، حاول بعد قليل.',
     'duplicate key':'هذا العنصر موجود مسبقًا.',
   };
@@ -1934,6 +2041,7 @@ async function start(){
   const qs = new URLSearchParams(location.search);
   try { pendingInvite = qs.get('invite') || localStorage.getItem('spark_pending_invite') || null; if (pendingInvite) localStorage.setItem('spark_pending_invite', pendingInvite); } catch(e) { pendingInvite = qs.get('invite'); }
   if (DEMO) api = MockApi();
+  else if (USE_LARAVEL) api = LaravelApi();
   else {
     await new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'; s.onload = res; s.onerror = rej; document.head.appendChild(s); })
       .catch(() => { $('#app').innerHTML = '<div class="notice err">تعذّر تحميل مكتبة Supabase. تحقق من الاتصال.</div>'; throw new Error('lib'); });
