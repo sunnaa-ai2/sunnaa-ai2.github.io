@@ -1,19 +1,50 @@
 # Spark صُنّاع AI 2
 
-معرض أعمال متدربي مبادرة صُنّاع — سبارك للابتكار والإبداع.
+معرض أعمال متدربي مبادرة **صُنّاع** — مؤسسة سبارك للابتكار والإبداع. لكل متدرب صفحة شخصية يرفع عليها حلول التمارين، والكل يقدر يتصفح ويعلّق ويتفاعل.
 
-- الموقع: https://sunnaa-ai2.github.io/
-- الواجهة: `index.html` (صفحة واحدة، بدون خطوات بناء)
-- قاعدة البيانات: Supabase (ملف `supabase.sql` يُشغَّل مرة واحدة في SQL Editor)
+> An invite-only gallery where Spark's "Sunna'a AI 2" trainees publish their exercise work. Arabic, RTL, single-page frontend on GitHub Pages with a Laravel 12 + MySQL API.
 
-## مكتبات مستخدمة
-- [Lenis](https://github.com/darkroomengineering/lenis) 1.3.27 — سكرول ناعم (MIT)، مضمّنة داخل `index.html`
-- [Supabase JS](https://github.com/supabase/supabase-js) — قاعدة البيانات وتسجيل الدخول
-- [GSAP](https://gsap.com) 3.15.0 — حركات الهوية (ScrollTrigger, SplitText, DrawSVG)
-- [PDF.js](https://github.com/mozilla/pdf.js) — صور مصغرة لملفات PDF
+**الموقع:** https://sunnaa-ai2.github.io/
+
+## المزايا
+- صفحة شخصية لكل متدرب (اسم وصورة)، تظهر في الواجهة الرئيسية.
+- رفع الأعمال حسب رقم التمرين: صورة، PDF، رابط، أو أي ملف، وترتيبها من الأقدم للأحدث.
+- إعجاب وعدم إعجاب (عدد عدم الإعجاب يراه صاحب العمل والأدمن فقط) وتعليقات.
+- صفحة لكل تمرين بوصف يكتبه الأدمن، وإشعارات، وشارات، وصور مصغرة لملفات PDF.
+- الانضمام بدعوة فقط: رابط لمرة واحدة مربوط بإيميل محدد، ينشئه الأدمن ويرسله من Gmail.
+- الدخول برابط يصل على الإيميل، بدون كلمات مرور.
+- تعديل وحذف الأعمال، وحذف الحساب بالكامل.
+- التصفح متاح للجميع بدون تسجيل.
+
+## التقنيات
+| الجزء | المستخدم |
+|---|---|
+| الواجهة | ملف واحد `index.html` (HTML/CSS/JS بدون خطوات بناء)، على GitHub Pages |
+| الحركة | [GSAP](https://gsap.com) 3.15 (ScrollTrigger, SplitText, DrawSVG)، و[Lenis](https://github.com/darkroomengineering/lenis) للسكرول الناعم |
+| ملفات PDF | [PDF.js](https://github.com/mozilla/pdf.js) للصور المصغرة |
+| الباك اند | Laravel 12 + Sanctum (توكنات API)، في مجلد [`backend/`](backend/README.md) |
+| قاعدة البيانات | MySQL / MariaDB |
+| الاستضافة | alwaysdata (PHP + MySQL + بريد الإرسال) |
+| الاختبارات | PHPUnit على GitHub Actions، على SQLite وMySQL 8 |
 
 ## الهوية
-هوية "المختبر": خلفية سوداء بشبكة خفيفة، والأحمر (#FF2E3B) إشارة للإجراءات فقط. الخطوط: Alexandria للعناوين، IBM Plex Sans Arabic للنصوص، IBM Plex Mono للتسميات.
+هوية "المختبر": خلفية سوداء بشبكة خفيفة، والأحمر `#FF2E3B` إشارة للإجراءات فقط. الخطوط: Alexandria للعناوين، IBM Plex Sans Arabic للنصوص، IBM Plex Mono للتسميات. افتتاحية متحركة 15 ثانية، ثم جولة سكرول تلقائية تتوقف عند أي تفاعل.
 
-## الباك اند (Laravel + MySQL)
-في مجلد [`backend/`](backend/README.md): API كامل بـ Laravel 12 وMySQL، مع اختبارات تعمل على GitHub Actions ودليل نشر. الموقع يبقى على Supabase إلى أن يُنشر الباك اند ويُغيَّر `BACKEND` في `index.html` إلى `"laravel"`.
+## بنية المستودع
+```
+index.html                 الواجهة كاملة
+backend/                   Laravel API
+  app/Http/Controllers/    نقاط الـ API
+  database/migrations/     جداول MySQL
+  tests/Feature/           اختبارات الـ API
+  deploy/alwaysdata.sh     تثبيت أو تحديث السيرفر بأمر واحد
+.github/workflows/         الاختبارات وملف composer.lock
+```
+
+## التشغيل والنشر
+تفاصيل الـ API ومتغيرات البيئة وخطوات النشر في [`backend/README.md`](backend/README.md).
+
+تحديث السيرفر بعد أي تعديل:
+```bash
+cd ~/site && git pull && bash backend/deploy/alwaysdata.sh
+```
