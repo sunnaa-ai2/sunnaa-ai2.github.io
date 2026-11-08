@@ -44,6 +44,14 @@ class AuthTest extends TestCase
         $this->postJson('/api/auth/verify', ['token' => str_repeat('a', 48)])->assertStatus(422);
     }
 
+    public function test_console_login_link_works(): void
+    {
+        $this->artisan('sunnaa:login-link', ['email' => 'Admin@Test.com'])->assertSuccessful();
+        $row = LoginToken::latest('id')->first();
+        $this->assertSame('admin@test.com', $row->email);
+        $this->assertTrue($row->expires_at->isFuture());
+    }
+
     public function test_admin_flag_comes_from_admin_emails(): void
     {
         $this->as($this->user('trainer@test.com'))->getJson('/api/me')->assertJsonPath('is_admin', true);
