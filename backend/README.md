@@ -95,7 +95,7 @@ GitHub Pages لا يشغّل PHP، لذلك يحتاج الباك اند سير�
 | `DB_*` | بيانات MySQL |
 | `FRONTEND_URL` · `CORS_ORIGINS` | `https://sunnaa-ai2.github.io` |
 | `ADMIN_EMAILS` | إيميلات الأدمن مفصولة بفاصلة |
-| `MAIL_*` | SMTP لإرسال روابط الدخول (مثلًا Brevo) — بدونه لا تصل الروابط |
+| `MAIL_*` | بريد alwaysdata نفسه لإرسال روابط الدخول (بدون خدمة خارجية وبدون كلمة سر). `MAIL_FROM_ADDRESS` = العنوان المنشأ من Emails ← Addresses. للطوارئ: `php artisan sunnaa:login-link EMAIL` يطبع رابط دخول بدون بريد |
 | `FILES_DISK` | `local` أو `s3` |
 
 ### بعد النشر
