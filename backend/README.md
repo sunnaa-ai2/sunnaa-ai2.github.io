@@ -65,17 +65,13 @@ GitHub Pages لا يشغّل PHP، لذلك يحتاج الباك اند سير�
 
 1. سجّل في alwaysdata.com واختر الخطة المجانية (للاستخدام الشخصي وغير الربحي).
 2. **Databases ← MySQL**: أنشئ قاعدة بيانات ومستخدمًا لها، واحفظ الاسم وكلمة المرور والـ Host.
-3. **SSH**: فعّل الدخول بكلمة مرور، ثم من الطرفية:
+3. **SSH**: فعّل الدخول بكلمة مرور للمستخدم الموجود، ثم من الطرفية (`ssh sunnaa@ssh-sunnaa.alwaysdata.net`):
    ```bash
    git clone https://github.com/sunnaa-ai2/sunnaa-ai2.github.io.git site
-   cd site/backend
-   composer install --no-dev --optimize-autoloader
-   cp .env.example .env
-   nano .env            # عبّئ قيم MySQL والإيميل و APP_URL
-   php artisan key:generate
-   php artisan migrate --force
-   php artisan config:cache
+   bash site/backend/deploy/alwaysdata.sh
    ```
+   السكربت يثبت الحزم، ينشئ `.env` من `.env.example` (معبأ لحساب sunnaa)، يسألك عن كلمة سر MySQL بشكل مخفي، ينشئ الجداول، ويجهز الكاش.
+   للتحديث لاحقًا: `cd site && git pull && bash backend/deploy/alwaysdata.sh`
 4. **Web ← Sites**: أنشئ موقعًا من نوع PHP، واجعل المجلد الجذري `site/backend/public`.
 5. رابط الـ API سيكون مثل `https://اسم-حسابك.alwaysdata.net`. ضعه في `APP_URL` داخل `.env`.
 
