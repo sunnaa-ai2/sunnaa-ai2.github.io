@@ -35,6 +35,22 @@ class Files
         return $file->storeAs("avatars/{$userId}", 'avatar-'.now()->timestamp.'.'.$ext, ['disk' => config('spark.disk')]);
     }
 
+    /** image | pdf | file, from the mime type the server detected (never trusts the file name). */
+    public static function kindOf(?string $mime): string
+    {
+        if ($mime === 'application/pdf') {
+            return 'pdf';
+        }
+
+        return is_string($mime) && str_starts_with($mime, 'image/') && $mime !== 'image/svg+xml' ? 'image' : 'file';
+    }
+
+    /** Removes every stored file of a work. */
+    public static function deleteWork(string $workId): void
+    {
+        self::disk()->deleteDirectory("works/{$workId}");
+    }
+
     public static function delete(?string $path): void
     {
         if ($path) {
@@ -45,7 +61,7 @@ class Files
     /** Deletes every file that belongs to a member (works + avatar). */
     public static function purgeMember(Profile $profile): void
     {
-        Work::where('user_id', $profile->user_id)->whereNotNull('file_path')->pluck('file_path')->each(fn ($p) => self::delete($p));
+        Work::where('user_id', $profile->user_id)->pluck('id')->each(fn ($id) => self::deleteWork($id));
         self::delete($profile->avatar_path);
     }
 

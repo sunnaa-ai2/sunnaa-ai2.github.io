@@ -12,7 +12,7 @@ class LoginLinkMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public string $url, public int $minutes)
+    public function __construct(public string $url)
     {
     }
 

@@ -6,6 +6,7 @@ use App\Models\Exercise;
 use App\Models\Invite;
 use App\Models\Profile;
 use App\Support\Files;
+use App\Support\LoginLinks;
 use App\Support\Present;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -40,6 +41,7 @@ class AdminController extends Controller
         DB::transaction(function () use ($profile) {
             $user = $profile->user;
             $user->tokens()->delete();
+            LoginLinks::forget($user->email);
             $user->delete();
         });
 

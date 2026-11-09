@@ -5,14 +5,14 @@ namespace App\Http\Controllers;
 use App\Mail\LoginLinkMail;
 use App\Models\LoginToken;
 use App\Models\User;
+use App\Support\LoginLinks;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
-    /** Sends a one-time login link. Always answers "ok" so nobody can probe which e-mails exist. */
+    /** Sends the e-mail's permanent login link. Always answers "ok" so nobody can probe which e-mails exist. */
     public function link(Request $request)
     {
         $data = $request->validate([
@@ -20,17 +20,8 @@ class AuthController extends Controller
             'invite' => ['nullable', 'uuid'],
         ]);
         $email = strtolower(trim($data['email']));
-        $plain = Str::random(48);
-        $ttl = config('spark.login_ttl');
-
-        LoginToken::create([
-            'email' => $email,
-            'token_hash' => hash('sha256', $plain),
-            'expires_at' => now()->addMinutes($ttl),
-        ]);
-
-        $url = rtrim(config('spark.frontend_url'), '/').'/?login='.$plain.(! empty($data['invite']) ? '&invite='.$data['invite'] : '');
-        Mail::to($email)->send(new LoginLinkMail($url, $ttl));
+        $url = LoginLinks::url(LoginLinks::token($email), $data['invite'] ?? null);
+        Mail::to($email)->send(new LoginLinkMail($url));
 
         return response()->json(['ok' => true]);
     }
@@ -42,8 +33,9 @@ class AuthController extends Controller
 
         $user = DB::transaction(function () use ($data) {
             $row = LoginToken::where('token_hash', hash('sha256', $data['token']))->lockForUpdate()->first();
-            abort_if(! $row || $row->used_at || $row->expires_at->isPast(), 422, 'LOGIN_LINK_INVALID');
-            $row->update(['used_at' => now()]);
+            // permanent links (no expires_at) work every time; old 30-minute links work once
+            abort_if(! $row || ($row->expires_at && ($row->used_at || $row->expires_at->isPast())), 422, 'LOGIN_LINK_INVALID');
+            $row->update(['used_at' => now()]);   // last use
 
             $user = User::firstOrCreate(['email' => $row->email]);
             if (! $user->email_verified_at) {

@@ -25,7 +25,8 @@ Route::get('reactions', [ReactionController::class, 'index']);
 Route::get('comments/rows', [CommentController::class, 'rows']);
 Route::get('works/{work}/comments', [CommentController::class, 'index']);
 
-Route::get('files/works/{work}', [FileController::class, 'work'])->name('files.work');
+Route::get('files/works/{work}', [FileController::class, 'work'])->name('files.work');          // first file (older links)
+Route::get('files/work-files/{file}', [FileController::class, 'workFile'])->name('files.workfile');
 Route::get('files/avatars/{profile}', [FileController::class, 'avatar'])->name('files.avatar');
 
 /* ---------- signed in ---------- */

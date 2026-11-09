@@ -24,7 +24,7 @@ class AccountTest extends TestCase
     {
         $m = $this->member('m@x.com');
         $workId = $this->as($m)->post('/api/works', ['exercise_no' => 1, 'kind' => 'image', 'file' => UploadedFile::fake()->image('a.jpg')], ['Accept' => 'application/json'])->json('id');
-        $path = Work::find($workId)->file_path;
+        $path = Work::find($workId)->files()->first()->path;
         Storage::disk('local')->assertExists($path);
         $this->as($m)->postJson("/api/works/{$workId}/comments", ['body' => 'x']);
 

@@ -4,17 +4,32 @@ namespace App\Http\Controllers;
 
 use App\Models\Profile;
 use App\Models\Work;
+use App\Models\WorkFile;
 use App\Support\Files;
 
 class FileController extends Controller
 {
+    /** First file of a work (kept for links made before works had several files). */
     public function work(Work $work)
     {
-        abort_unless($work->file_path && Files::disk()->exists($work->file_path), 404);
-        $inline = Files::isInline($work->mime);
+        $file = $work->files()->first();
+        abort_unless($file, 404);
 
-        return Files::disk()->response($work->file_path, $work->file_name, [
-            'Content-Type' => $inline ? $work->mime : 'application/octet-stream',
+        return $this->serve($file);
+    }
+
+    public function workFile(WorkFile $file)
+    {
+        return $this->serve($file);
+    }
+
+    private function serve(WorkFile $file)
+    {
+        abort_unless(Files::disk()->exists($file->path), 404);
+        $inline = Files::isInline($file->mime);
+
+        return Files::disk()->response($file->path, $file->name, [
+            'Content-Type' => $inline ? $file->mime : 'application/octet-stream',
             'X-Content-Type-Options' => 'nosniff',
             'Cache-Control' => 'public, max-age=604800',
             'Content-Security-Policy' => "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox",

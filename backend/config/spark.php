@@ -19,6 +19,9 @@ return [
     // Disk for uploads: "local" for a persistent server, "s3" for Supabase Storage / any S3 bucket.
     'disk' => env('FILES_DISK', 'local'),
 
-    // Max upload size in kilobytes (default 50 MB).
+    // Max upload size in kilobytes (default 50 MB): per file, and for all files of one submission together.
     'max_upload_kb' => (int) env('MAX_UPLOAD_KB', 51200),
+
+    // Files one exercise submission can hold.
+    'max_files' => (int) env('MAX_FILES_PER_WORK', 8),
 ];

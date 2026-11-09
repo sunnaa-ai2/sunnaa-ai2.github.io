@@ -17,7 +17,7 @@ class PublicController extends Controller
 
     public function works()
     {
-        return response()->json(Work::orderBy('created_at')->get()->map(fn ($w) => Present::work($w)));
+        return response()->json(Work::with('files')->orderBy('created_at')->get()->map(fn ($w) => Present::work($w)));
     }
 
     public function exercises()

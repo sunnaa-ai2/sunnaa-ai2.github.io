@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class LoginToken extends Model
 {
-    protected $fillable = ['email', 'token_hash', 'expires_at', 'used_at'];
+    protected $fillable = ['email', 'token_hash', 'token_enc', 'expires_at', 'used_at'];
 
     protected function casts(): array
     {

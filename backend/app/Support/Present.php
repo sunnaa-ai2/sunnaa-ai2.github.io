@@ -27,15 +27,29 @@ class Present
         ];
     }
 
+    /**
+     * kind/url/file_path describe the first file (or the link), so a card can show one thumbnail;
+     * files lists every attachment of the submission in order.
+     */
     public static function work(Work $w): array
     {
+        $files = $w->kind === 'link' ? [] : $w->files->map(fn ($f) => [
+            'id' => $f->id,
+            'kind' => $f->kind,
+            'url' => route('files.workfile', ['file' => $f->id]),
+            'name' => $f->name,
+            'size' => $f->size,
+        ])->values()->all();
+        $first = $files[0] ?? null;
+
         return [
             'id' => $w->id,
             'user_id' => $w->user_id,
             'exercise_no' => $w->exercise_no,
-            'kind' => $w->kind,
-            'url' => $w->kind === 'link' ? $w->url : route('files.work', ['work' => $w->id, 'v' => $w->updated_at?->timestamp]),
-            'file_path' => $w->file_name,
+            'kind' => $w->kind === 'link' ? 'link' : ($first['kind'] ?? 'file'),
+            'url' => $w->kind === 'link' ? $w->url : ($first['url'] ?? null),
+            'file_path' => $first['name'] ?? null,
+            'files' => $files,
             'created_at' => $w->created_at?->toIso8601ZuluString('millisecond'),
             'updated_at' => $w->updated_at?->toIso8601ZuluString('millisecond'),
         ];

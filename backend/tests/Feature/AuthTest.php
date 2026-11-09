@@ -9,25 +9,43 @@ use Tests\TestCase;
 
 class AuthTest extends TestCase
 {
-    public function test_login_link_is_mailed_and_works_once(): void
+    private function mailedLink(string $email): string
     {
         Mail::fake();
-        $this->postJson('/api/auth/link', ['email' => 'Sara@Example.com'])->assertOk()->assertJson(['ok' => true]);
-
+        $this->postJson('/api/auth/link', ['email' => $email])->assertOk()->assertJson(['ok' => true]);
         $url = null;
-        Mail::assertSent(LoginLinkMail::class, function (LoginLinkMail $m) use (&$url) {
+        Mail::assertSent(LoginLinkMail::class, function (LoginLinkMail $m) use (&$url, $email) {
             $url = $m->url;
 
-            return $m->hasTo('sara@example.com');
+            return $m->hasTo(strtolower($email));
         });
         $this->assertStringStartsWith('https://front.test/?login=', $url);
         parse_str(parse_url($url, PHP_URL_QUERY), $q);
 
-        $res = $this->postJson('/api/auth/verify', ['token' => $q['login']])->assertOk()->assertJsonPath('user.email', 'sara@example.com')->assertJsonPath('is_admin', false);
-        $this->withToken($res->json('token'))->getJson('/api/me')->assertOk()->assertJsonPath('is_member', false);
+        return $q['login'];
+    }
 
-        // the same link cannot be used twice
-        $this->postJson('/api/auth/verify', ['token' => $q['login']])->assertStatus(422)->assertJsonPath('message', 'LOGIN_LINK_INVALID');
+    public function test_login_link_is_permanent_and_the_same_link_is_resent(): void
+    {
+        $token = $this->mailedLink('Sara@Example.com');
+
+        $res = $this->postJson('/api/auth/verify', ['token' => $token])->assertOk()->assertJsonPath('user.email', 'sara@example.com')->assertJsonPath('is_admin', false);
+        $this->withToken($res->json('token'))->getJson('/api/me')->assertOk()->assertJsonPath('is_member', false);
+        $this->app['auth']->forgetGuards();
+        $this->flushHeaders();
+
+        // works again later (another device), and a new request sends the very same link
+        $this->travel(400)->days();
+        $this->postJson('/api/auth/verify', ['token' => $token])->assertOk()->assertJsonPath('user.email', 'sara@example.com');
+        $this->assertSame($token, $this->mailedLink('sara@example.com'));
+        $this->assertSame(1, LoginToken::where('email', 'sara@example.com')->count());
+    }
+
+    public function test_old_one_time_links_still_work_only_once(): void
+    {
+        LoginToken::create(['email' => 'x@y.com', 'token_hash' => hash('sha256', str_repeat('b', 48)), 'expires_at' => now()->addMinutes(10)]);
+        $this->postJson('/api/auth/verify', ['token' => str_repeat('b', 48)])->assertOk();
+        $this->postJson('/api/auth/verify', ['token' => str_repeat('b', 48)])->assertStatus(422)->assertJsonPath('message', 'LOGIN_LINK_INVALID');
     }
 
     public function test_invite_token_is_carried_in_the_login_link(): void
@@ -44,12 +62,26 @@ class AuthTest extends TestCase
         $this->postJson('/api/auth/verify', ['token' => str_repeat('a', 48)])->assertStatus(422);
     }
 
-    public function test_console_login_link_works(): void
+    public function test_console_prints_the_permanent_link_and_new_replaces_it(): void
     {
         $this->artisan('sunnaa:login-link', ['email' => 'Admin@Test.com'])->assertSuccessful();
-        $row = LoginToken::latest('id')->first();
-        $this->assertSame('admin@test.com', $row->email);
-        $this->assertTrue($row->expires_at->isFuture());
+        $row = LoginToken::where('email', 'admin@test.com')->sole();
+        $this->assertNull($row->expires_at);
+        $old = \Illuminate\Support\Facades\Crypt::decryptString($row->token_enc);
+        $this->postJson('/api/auth/verify', ['token' => $old])->assertOk();
+
+        $this->artisan('sunnaa:login-link', ['email' => 'admin@test.com', '--new' => true])->assertSuccessful();
+        $this->postJson('/api/auth/verify', ['token' => $old])->assertStatus(422);
+        $this->assertSame(1, LoginToken::where('email', 'admin@test.com')->count());
+    }
+
+    public function test_deleting_the_account_removes_its_login_link(): void
+    {
+        $m = $this->member('gone@test.com');
+        $token = $this->mailedLink('gone@test.com');
+        $this->as($m)->deleteJson('/api/me')->assertOk();
+        $this->assertSame(0, LoginToken::where('email', 'gone@test.com')->count());
+        $this->guest()->postJson('/api/auth/verify', ['token' => $token])->assertStatus(422);
     }
 
     public function test_admin_flag_comes_from_admin_emails(): void

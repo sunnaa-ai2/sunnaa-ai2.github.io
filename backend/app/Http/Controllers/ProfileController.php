@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Support\Files;
+use App\Support\LoginLinks;
 use App\Support\Present;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,6 +40,7 @@ class ProfileController extends Controller
         }
         DB::transaction(function () use ($user) {
             $user->tokens()->delete();
+            LoginLinks::forget($user->email);
             $user->delete();
         });
 

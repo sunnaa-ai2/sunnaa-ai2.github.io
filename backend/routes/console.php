@@ -3,29 +3,23 @@
 use App\Models\LoginToken;
 use App\Models\Profile;
 use App\Models\User;
+use App\Support\LoginLinks;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
-use Illuminate\Support\Str;
 
 // Old login links are useless after they expire; keep the table small.
 Schedule::call(fn () => LoginToken::where('expires_at', '<', now()->subDay())->delete())->daily();
 
 /*
- * Prints a one-time login link without sending an e-mail.
- * Useful on the server before SMTP is configured:  php artisan sunnaa:login-link you@gmail.com
+ * Prints the permanent login link of an e-mail, without sending an e-mail:
+ *   php artisan sunnaa:login-link you@gmail.com
+ * --new replaces the link (the old one stops working), e.g. if it was shared by mistake.
  */
-Artisan::command('sunnaa:login-link {email}', function (string $email) {
-    $plain = Str::random(48);
-    $ttl = config('spark.login_ttl');
-    LoginToken::create([
-        'email' => strtolower(trim($email)),
-        'token_hash' => hash('sha256', $plain),
-        'expires_at' => now()->addMinutes($ttl),
-    ]);
-    $this->info(rtrim(config('spark.frontend_url'), '/').'/?login='.$plain);
-    $this->line("Valid once, for {$ttl} minutes.");
-})->purpose('Print a one-time login link for an e-mail (no mail is sent)');
+Artisan::command('sunnaa:login-link {email} {--new : Replace the link; the old one stops working}', function (string $email) {
+    $this->info(LoginLinks::url(LoginLinks::token($email, (bool) $this->option('new'))));
+    $this->line('Permanent link: it signs in to this account every time. Do not share it.');
+})->purpose('Print the permanent login link of an e-mail (no mail is sent)');
 
 /*
  * One-time import of the old Supabase data (users + profiles), from a JSON file or stdin:
