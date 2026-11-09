@@ -728,22 +728,15 @@ footer.ft .wrap{display:block!important}
 </script>
 <script>
 /* =========================================================
-   الإعدادات — ضع هنا بيانات مشروع Supabase الخاص بك.
-   إذا تُركت فارغة يعمل الموقع في "وضع المعاينة" ببيانات تجريبية.
+   الإعدادات — رابط سيرفر الـ API (مجلد backend/ في المستودع)، بدون /api في آخره.
+   إذا تُرك فارغًا يعمل الموقع في "وضع المعاينة" ببيانات تجريبية داخل المتصفح.
    ========================================================= */
 const CONFIG = {
-  // أي باك اند يستخدمه الموقع: "supabase" أو "laravel"
-  BACKEND: "laravel",
-  // Supabase
-  SUPABASE_URL: "https://vsxqdumhodkmnbuwwdte.supabase.co",       // مثال: https://abcdxyz.supabase.co
-  SUPABASE_ANON_KEY: "sb_publishable_CvEh2JQDsicoT7kpITSWyQ_fstuwcGs",   // المفتاح العام (anon public key)
-  // Laravel (مجلد backend/ في المستودع) — رابط السيرفر بدون /api في آخره
-  LARAVEL_API_URL: "https://sunnaa.alwaysdata.net"
+  API_URL: "https://sunnaa.alwaysdata.net"
 };
 /* ========================================================= */
 
-const USE_LARAVEL = CONFIG.BACKEND === 'laravel' && !!CONFIG.LARAVEL_API_URL;
-const DEMO = !USE_LARAVEL && (!CONFIG.SUPABASE_URL || !CONFIG.SUPABASE_ANON_KEY);
+const DEMO = !CONFIG.API_URL;
 const COLORS = ['#ff2e3b','#00bc3a','#ffcc00','#4da3ff','#ff8022','#b06cff'];
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -799,7 +792,7 @@ const toDataUrl = blob => new Promise((res,rej)=>{ const r=new FileReader(); r.o
    ========================================================= */
 function MockApi(){
   const KEY = 'spark_ai2_demo_v2';
-  const ADMINS = ['azanmd0592344829@gmail.com','ahmedafana652001@gmail.com'];
+  const ADMINS = ['abed@example.com','ahmed@example.com'];
   let db, listener = null;
   const art = (n, c1, c2) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="800" height="600" fill="url(#g)"/><circle cx="640" cy="140" r="90" fill="#fff" opacity=".18"/><circle cx="160" cy="470" r="130" fill="#fff" opacity=".12"/><rect x="230" y="220" width="340" height="160" rx="24" fill="#fff" opacity=".9"/><text x="400" y="318" font-family="Tahoma,Arial" font-size="54" font-weight="700" text-anchor="middle" fill="${c1}">تصميم ${n}</text></svg>`);
   function seed(){
@@ -969,123 +962,11 @@ function MockApi(){
 }
 
 /* =========================================================
-   Backend 2: Supabase (الموقع الحقيقي)
-   ========================================================= */
-function SupaApi(){
-  const sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
-    auth: { flowType:'implicit', persistSession:true, detectSessionInUrl:true, autoRefreshToken:true }
-  });
-  let user = null, admin = false, listener = null;
-  const chk = ({data, error}) => { if (error) throw error; return data; };
-  async function loadAuth(){
-    const { data:{ session } } = await sb.auth.getSession();
-    user = session ? { id:session.user.id, email:(session.user.email||'').toLowerCase() } : null;
-    admin = false;
-    if (user) { const { data } = await sb.rpc('is_admin'); admin = !!data; }
-  }
-  async function upload(file, kind, folderMax){
-    let blob = file, ext, type;
-    if (kind === 'image' || kind === 'avatar') {
-      blob = await compressImage(file, kind === 'avatar' ? 400 : (folderMax || 1600), .85);
-      type = blob.type || 'image/jpeg'; ext = type === 'image/gif' ? 'gif' : 'jpg';
-    } else {
-      if (file.size > 50*1024*1024) throw new Error('حجم الملف أكبر من 50MB');
-      const m = /\.([a-z0-9]{1,10})$/i.exec(file.name || '');
-      ext = m ? m[1].toLowerCase() : 'bin';
-      type = file.type || 'application/octet-stream';
-      // ملفات قد تُشغَّل كصفحة في المتصفح (HTML/SVG/JS…) تُرفع كتنزيل فقط، للأمان
-      if (/html|svg|xml|javascript|ecmascript/i.test(type) || /^(html?|svg|xhtml|xml|js|mjs)$/.test(ext)) type = 'application/octet-stream';
-    }
-    const path = `${user.id}/${kind}-${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
-    chk(await sb.storage.from('uploads').upload(path, blob, { contentType:type, upsert:false }));
-    return { path, url: sb.storage.from('uploads').getPublicUrl(path).data.publicUrl };
-  }
-  const rmFile = async p => { if (p) await sb.storage.from('uploads').remove([p]); };
-  return {
-    demo: false,
-    async init(){
-      await loadAuth();
-      sb.auth.onAuthStateChange(ev => {
-        if (['SIGNED_IN','SIGNED_OUT','USER_UPDATED'].includes(ev)) setTimeout(() => loadAuth().then(() => listener && listener()), 0);
-      });
-    },
-    onChange(cb){ listener = cb; },
-    user: () => user,
-    isAdmin: () => admin,
-    async sendLink(email, token){
-      const redirect = location.origin + location.pathname + (token ? '?invite=' + encodeURIComponent(token) : '');
-      chk(await sb.auth.signInWithOtp({ email:email.trim().toLowerCase(), options:{ emailRedirectTo: redirect, shouldCreateUser:true } }));
-    },
-    async logout(){ await sb.auth.signOut(); },
-    async profiles(){ return chk(await sb.from('profiles').select('*').order('created_at')); },
-    async works(){ return chk(await sb.from('works').select('*').order('created_at')); },
-    async reactions(){ return chk(await sb.from('reactions').select('work_id,user_id,value,created_at')); },
-    async commentRows(){ return chk(await sb.from('comments').select('work_id,user_id')); },
-    async exercises(){ return chk(await sb.from('exercises').select('*').order('no')); },
-    async saveExercise(no, title, description){ chk(await sb.from('exercises').upsert({ no, title, description, updated_at:new Date().toISOString() }, { onConflict:'no' })); },
-    async notifications(){ if (!user) return []; return chk(await sb.from('notifications').select('*').order('created_at', { ascending:false }).limit(60)); },
-    async markNotifsRead(){ if (!user) return; chk(await sb.from('notifications').update({ read_at:new Date().toISOString() }).is('read_at', null).eq('user_id', user.id)); },
-    async comments(workId){ return chk(await sb.from('comments').select('*').eq('work_id', workId).order('created_at')); },
-    async react(workId, value){
-      if (!value) chk(await sb.from('reactions').delete().eq('work_id', workId).eq('user_id', user.id));
-      else chk(await sb.from('reactions').upsert({ work_id:workId, user_id:user.id, value }, { onConflict:'work_id,user_id' }));
-    },
-    async addComment(workId, body){ chk(await sb.from('comments').insert({ work_id:workId, user_id:user.id, body })); },
-    async delComment(id){ chk(await sb.from('comments').delete().eq('id', id)); },
-    async saveProfile(fields, avatar){
-      const upd = { ...fields };
-      let oldAvatar = null;
-      if (avatar) {
-        oldAvatar = (await sb.from('profiles').select('avatar_url').eq('id', user.id).single()).data?.avatar_url;
-        upd.avatar_url = (await upload(avatar, 'avatar')).url;
-      }
-      chk(await sb.from('profiles').update(upd).eq('id', user.id));
-      const op = oldAvatar && oldAvatar.split('/uploads/')[1]; if (op) await rmFile(decodeURIComponent(op));
-    },
-    async addWork({exercise_no, kind, url, file}){
-      let file_path = null;
-      if (kind !== 'link') { const up = await upload(file, kind); url = up.url; file_path = up.path; }
-      chk(await sb.from('works').insert({ user_id:user.id, exercise_no, kind, url, file_path }));
-    },
-    async updateWork(id, {exercise_no, kind, url, file, old}){
-      const upd = { exercise_no, updated_at:new Date().toISOString() };
-      if (kind) {
-        upd.kind = kind; upd.file_path = null; upd.url = url;
-        if (kind !== 'link') { const up = await upload(file, kind); upd.url = up.url; upd.file_path = up.path; }
-      }
-      chk(await sb.from('works').update(upd).eq('id', id));
-      if (kind && old?.file_path) await rmFile(old.file_path);
-    },
-    async delWork(w){ chk(await sb.from('works').delete().eq('id', w.id)); await rmFile(w.file_path); },
-    async join(token, name){ chk(await sb.rpc('join_with_invite', { p_token: token || null, p_name: name })); },
-    async invites(){ return chk(await sb.from('invites').select('*').order('created_at', { ascending:false })); },
-    async createInvite(email){ return chk(await sb.from('invites').insert({ email:email.trim().toLowerCase() }).select().single()); },
-    async delInvite(token){ chk(await sb.from('invites').delete().eq('token', token)); },
-    async delMember(id){
-      const paths = (await sb.from('works').select('file_path').eq('user_id', id)).data?.map(r => r.file_path).filter(Boolean) || [];
-      const av = (await sb.from('profiles').select('avatar_url').eq('id', id).single()).data?.avatar_url;
-      const avp = av && av.split('/uploads/')[1]; if (avp) paths.push(decodeURIComponent(avp));
-      chk(await sb.from('profiles').delete().eq('id', id));
-      if (paths.length) await sb.storage.from('uploads').remove(paths);
-    },
-    async deleteMyAccount(){
-      const paths = (await sb.from('works').select('file_path').eq('user_id', user.id)).data?.map(r => r.file_path).filter(Boolean) || [];
-      const av = (await sb.from('profiles').select('avatar_url').eq('id', user.id).single()).data?.avatar_url;
-      const avp = av && av.split('/uploads/')[1]; if (avp) paths.push(decodeURIComponent(avp));
-      if (paths.length) await sb.storage.from('uploads').remove(paths);
-      chk(await sb.rpc('delete_my_account'));
-      await sb.auth.signOut();
-    },
-  };
-}
-
-
-/* =========================================================
-   Backend 3: Laravel API (backend/ في المستودع)
+   Backend 2: Laravel API (backend/ في المستودع)
    الدخول برابط على الإيميل ← توكن Sanctum يُحفظ في المتصفح ويُرسل مع كل طلب
    ========================================================= */
 function LaravelApi(){
-  const base = CONFIG.LARAVEL_API_URL.replace(/\/+$/, '') + '/api';
+  const base = CONFIG.API_URL.replace(/\/+$/, '') + '/api';
   const TK = 'spark_api_token';
   let token = null, user = null, admin = false, listener = null;
   try { token = localStorage.getItem(TK); } catch(e) {}
@@ -2040,20 +1921,8 @@ async function start(){
   // رابط الدعوة ?invite=TOKEN
   const qs = new URLSearchParams(location.search);
   try { pendingInvite = qs.get('invite') || localStorage.getItem('spark_pending_invite') || null; if (pendingInvite) localStorage.setItem('spark_pending_invite', pendingInvite); } catch(e) { pendingInvite = qs.get('invite'); }
-  if (DEMO) api = MockApi();
-  else if (USE_LARAVEL) api = LaravelApi();
-  else {
-    await new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'; s.onload = res; s.onerror = rej; document.head.appendChild(s); })
-      .catch(() => { $('#app').innerHTML = '<div class="notice err">تعذّر تحميل مكتبة Supabase. تحقق من الاتصال.</div>'; throw new Error('lib'); });
-    api = SupaApi();
-  }
+  api = DEMO ? MockApi() : LaravelApi();
   await api.init();
-  // تنظيف بقايا رابط الدخول من العنوان
-  if (/access_token|error_description|error=/.test(location.hash)) {
-    const m = decodeURIComponent((location.hash.match(/error_description=([^&]+)/) || [])[1] || '').replace(/\+/g,' ');
-    history.replaceState(null, '', location.pathname + location.search);
-    if (m) toast('رابط الدخول منتهي أو غير صالح، اطلب رابطًا جديدًا');
-  }
   api.onChange(async () => { await refresh(false); route(); });
   await refresh(false);
   if (pendingInvite && !myProfile()) location.hash = me() ? '#join' : '#login';
