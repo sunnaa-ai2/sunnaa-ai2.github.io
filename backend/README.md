@@ -13,7 +13,7 @@ API_URL: "https://sunnaa.alwaysdata.net"
 
 | الجزء | التفاصيل |
 |---|---|
-| الدخول | رابط يُرسل على الإيميل (صالح 30 دقيقة ولمرة واحدة) ← توكن API صالح 30 يومًا |
+| الدخول | رابط دائم لكل إيميل يُرسل على البريد (نفس الرابط كل مرة، يعمل من أي جهاز) ← توكن API صالح 30 يومًا. `sunnaa:login-link EMAIL --new` يستبدله إذا انتشر |
 | العضوية | الانضمام فقط برابط دعوة مربوط بإيميل محدد ويُستخدم مرة واحدة. الأدمن ينضم بدون دعوة |
 | الأدمن | الإيميلات في `ADMIN_EMAILS`: إنشاء دعوات، حذف أعضاء، كتابة وصف التمارين، حذف أي عمل أو تعليق |
 | الأعمال | رابط، صورة، PDF، أو أي ملف حتى 50MB. الصور وملفات PDF تفتح في المتصفح، وباقي الملفات تُنزَّل فقط (حماية من صفحات HTML الضارة) |
@@ -31,7 +31,7 @@ API_URL: "https://sunnaa.alwaysdata.net"
 | POST | `/auth/link` `{email, invite?}` | الكل |
 | POST | `/auth/verify` `{token}` | الكل |
 | GET | `/profiles` · `/works` · `/exercises` · `/reactions` · `/comments/rows` · `/works/{id}/comments` | الكل |
-| GET | `/files/works/{id}` · `/files/avatars/{userId}` | الكل |
+| GET | `/files/work-files/{fileId}` · `/files/works/{id}` (أول ملف) · `/files/avatars/{userId}` | الكل |
 | GET | `/me` · `/notifications` | مسجّل |
 | POST | `/auth/logout` · `/join` `{token?, name}` · `/notifications/read` | مسجّل |
 | DELETE | `/me` | مسجّل |
@@ -39,6 +39,8 @@ API_URL: "https://sunnaa.alwaysdata.net"
 | PUT | `/works/{id}/reaction` `{value: 1 \| -1 \| 0}` | عضو |
 | POST | `/works/{id}/comments` `{body}` | عضو |
 | POST/PATCH · DELETE | `/works/{id}` | صاحب العمل أو أدمن |
+
+العمل الواحد = تسليم تمرين: إما رابط (`kind=link`, `url`) أو من 1 إلى 8 ملفات بأي صيغة (`kind=files`, `files[]`)، بحد 50MB للملف وللتسليم كله. عند التعديل: `remove[]` لحذف ملفات بأرقامها و`files[]` لإضافة ملفات. كل عمل يرجع بقائمة `files` مرتبة.
 | DELETE | `/comments/{id}` | الكاتب أو أدمن |
 | GET · POST · DELETE | `/admin/invites` · `/admin/invites/{token}` | أدمن |
 | DELETE | `/admin/members/{userId}` | أدمن |

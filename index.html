@@ -697,6 +697,30 @@ footer.ft .wrap{display:block!important}
   .cohort{display:none}
   .ft-row{flex-direction:column;align-items:flex-start}
 }
+/* ---------- several files per exercise ---------- */
+.fbox{border:1px dashed var(--line);border-radius:14px;padding:12px;background:var(--card2);transition:border-color .15s}
+.fbox.drag{border-color:var(--ember,#ff2e3b)}
+.fhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.fcount{font-family:var(--f-mono,monospace);font-size:13px;color:var(--muted)}
+.flist{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-direction:column;gap:6px}
+.flist:empty{display:none}
+.fi{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:6px 8px}
+.fi img,.fi .fe{width:44px;height:34px;border-radius:6px;object-fit:cover;flex:none}
+.fi .fe{display:flex;align-items:center;justify-content:center;background:rgba(255,46,59,.12);color:var(--ember,#ff2e3b);font:600 10px var(--f-mono,monospace)}
+.fi .fn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.fi .fs{color:var(--muted);font-size:12px;font-family:var(--f-mono,monospace);flex:none}
+.fi .fx{border:0;background:none;color:var(--muted);cursor:pointer;font-size:13px;padding:4px 6px;flex:none}
+.fi .fx:hover{color:var(--ember,#ff2e3b)}
+.fi.gone{opacity:.45}.fi.gone .fn{text-decoration:line-through}
+.fi.new{border-color:rgba(255,46,59,.45)}
+.fstrip{display:flex;gap:8px;overflow-x:auto;padding:10px 12px;background:var(--card2);border-top:1px solid var(--line)}
+.fthumb{flex:none;width:76px;height:58px;border-radius:10px;overflow:hidden;border:2px solid transparent;background:var(--card);padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.fthumb.on{border-color:var(--ember,#ff2e3b)}
+.fthumb img{width:100%;height:100%;object-fit:cover;object-position:top}
+.fthumb .ph{font:600 11px var(--f-mono,monospace);color:var(--muted)}
+.fcap{display:flex;justify-content:space-between;gap:10px;padding:8px 14px;font-size:13px;color:var(--muted);border-top:1px solid var(--line)}
+.fcap span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bigtile .fsz{font-family:var(--f-mono,monospace);font-size:13px;opacity:.85}
 </style>
 </head>
 <body>
@@ -746,6 +770,24 @@ const rid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx
 const hashColor = s => { let h=0; for (const ch of String(s)) h=(h*31+ch.charCodeAt(0))|0; return COLORS[Math.abs(h)%COLORS.length]; };
 const fileExt = w => { const m = /\.([a-z0-9]{1,10})(?:[?#]|$)/i.exec(w.file_path || w.url || ''); return m && m[1].toLowerCase() !== 'bin' ? m[1].toUpperCase() : ''; };
 const fileLabel = w => w.kind === 'pdf' ? 'ملف PDF' : (fileExt(w) ? 'ملف ' + fileExt(w) : 'ملف');
+// every attachment of a work: {id, kind:image|pdf|file, url, name, size}
+const wFiles = w => w.kind === 'link' ? [] : (w.files && w.files.length ? w.files : (w.url ? [{ id:'', kind:w.kind, url:w.url, name:w.file_path || '' }] : []));
+const fIsPdf = f => f.kind === 'pdf' || /\.pdf$/i.test(f.name || '') || /^data:application\/pdf/i.test(f.url || '');
+const fExt = f => { const m = /\.([a-z0-9]{1,8})$/i.exec(f.name || ''); return m ? m[1].toUpperCase() : ''; };
+const fLabel = f => fIsPdf(f) ? 'PDF' : (fExt(f) || 'ملف');
+const fmtSize = b => b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+const kindOfFile = f => /^image\//.test(f.type) && f.type !== 'image/svg+xml' ? 'image' : (f.type === 'application/pdf' ? 'pdf' : 'file');
+const filesWord = n => n === 2 ? 'ملفان' : n + ' ملفات';
+const MAX_FILES = 8, MAX_BYTES = 50 * 1024 * 1024;
+// big photos are shrunk before upload; everything else goes as it is
+const shrinks = f => /^image\/(jpeg|png|webp)$/.test(f.type) && f.size > 1.5 * 1024 * 1024;
+const estSize = f => shrinks(f) ? 1.5 * 1024 * 1024 : f.size;
+async function prepWorkFile(f){
+  if (shrinks(f)) {
+    try { const b = await compressImage(f, 2000, .88); if (b.size < f.size) return new File([b], f.name.replace(/\.[^.]+$/, '') + '.jpg', { type:'image/jpeg' }); } catch(e) {}
+  }
+  return f;
+}
 const domainOf = u => { try { return new URL(u).hostname.replace(/^www\./,''); } catch(e){ return u; } };
 
 const ICON = {
@@ -791,7 +833,7 @@ const toDataUrl = blob => new Promise((res,rej)=>{ const r=new FileReader(); r.o
    Backend 1: وضع المعاينة (بيانات تجريبية في المتصفح)
    ========================================================= */
 function MockApi(){
-  const KEY = 'spark_ai2_demo_v2';
+  const KEY = 'spark_ai2_demo_v3';
   const ADMINS = ['abed@example.com','ahmed@example.com'];
   let db, listener = null;
   const art = (n, c1, c2) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="800" height="600" fill="url(#g)"/><circle cx="640" cy="140" r="90" fill="#fff" opacity=".18"/><circle cx="160" cy="470" r="130" fill="#fff" opacity=".12"/><rect x="230" y="220" width="340" height="160" rx="24" fill="#fff" opacity=".9"/><text x="400" y="318" font-family="Tahoma,Arial" font-size="54" font-weight="700" text-anchor="middle" fill="${c1}">تصميم ${n}</text></svg>`);
@@ -808,9 +850,11 @@ function MockApi(){
       {id:U.mo,full_name:'محمد (حساب تجريبي)',bio:'أتعلم كتابة البرومبتات وأتمتة المهام.',avatar_url:null,created_at:new Date(now-17*day).toISOString()},
       {id:U.layan,full_name:'ليان (حساب تجريبي)',bio:'',avatar_url:null,created_at:new Date(now-15*day).toISOString()},
     ];
-    const W = (uid,no,kind,url,d) => ({id:rid(),user_id:uid,exercise_no:no,kind,url,file_path:null,created_at:new Date(now-d*day).toISOString()});
+    const W = (uid,no,kind,url,d,more=[]) => ({id:rid(),user_id:uid,exercise_no:no,kind,url,file_path:null,
+      files: kind === 'link' ? [] : [{id:rid(),kind,url,name:kind === 'pdf' ? 'exercise.pdf' : 'design-'+no+'.jpg'}, ...more.map(([k,u,n]) => ({id:rid(),kind:k,url:u,name:n}))],
+      created_at:new Date(now-d*day).toISOString()});
     const works = [
-      W(U.abed,1,'image',art(1,'#12559B','#3b8de0'),14), W(U.abed,2,'link','https://claude.ai',10), W(U.abed,3,'image',art(3,'#FF8022','#ffb36b'),4),
+      W(U.abed,1,'image',art(1,'#12559B','#3b8de0'),14), W(U.abed,2,'link','https://claude.ai',10), W(U.abed,3,'image',art(3,'#FF8022','#ffb36b'),4,[['image',art('3ب','#12559B','#3b8de0'),'design-3b.jpg'],['file','data:text/plain;base64,','notes.txt']]),
       W(U.sara,1,'image',art(1,'#00BC3A','#5fe08a'),13), W(U.sara,2,'image',art(2,'#7a4fd0','#b08cf0'),8),
       W(U.mo,1,'pdf','data:application/pdf;base64,',12), W(U.mo,2,'image',art(2,'#d63e6c','#f08aa8'),3),
       W(U.layan,1,'image',art(1,'#E0A800','#ffd84d'),6),
@@ -860,6 +904,8 @@ function MockApi(){
     if (file.size > 3*1024*1024) throw new Error('في وضع المعاينة الحد الأقصى للملف هو 3MB');
     return toDataUrl(file);
   }
+  const toFileObj = async f => { const kind = kindOfFile(f); return { id:rid(), kind, url: await fileToUrl(f, kind), name:f.name, size:f.size }; };
+  const syncFirst = w => { const f = w.files[0]; w.kind = f ? f.kind : 'file'; w.url = f ? f.url : null; w.file_path = f ? f.name : null; };
   return {
     demo: true,
     accounts: () => [
@@ -915,15 +961,27 @@ function MockApi(){
       if (avatar) p.avatar_url = await toDataUrl(await compressImage(avatar, 300, .82));
       save();
     },
-    async addWork({exercise_no, kind, url, file}){
+    async addWork({exercise_no, kind, url, files}){
       need(isMember());
-      if (kind !== 'link') url = await fileToUrl(file, kind);
-      db.works.push({id:rid(),user_id:db.session,exercise_no,kind,url,file_path:null,created_at:new Date().toISOString()}); save();
+      const w = {id:rid(),user_id:db.session,exercise_no,kind:'link',url,file_path:null,files:[],created_at:new Date().toISOString()};
+      if (kind !== 'link') {
+        if (!files || !files.length) throw new Error('FILES_REQUIRED');
+        if (files.length > MAX_FILES) throw new Error('TOO_MANY_FILES');
+        w.files = await Promise.all(files.map(toFileObj)); syncFirst(w);
+      }
+      db.works.push(w); save();
     },
-    async updateWork(id, {exercise_no, kind, url, file}){
+    async updateWork(id, {exercise_no, kind, url, files, remove}){
       const w = db.works.find(x=>x.id===id); need(w && (w.user_id===db.session || isAdmin()));
       w.exercise_no = exercise_no;
-      if (kind) { w.kind = kind; w.url = kind === 'link' ? url : await fileToUrl(file, kind); }
+      if (kind === 'link') { w.kind = 'link'; w.url = url; w.files = []; w.file_path = null; }
+      else if (kind) {
+        const keep = (w.kind === 'link' ? [] : wFiles(w)).filter(f => !(remove || []).includes(f.id));
+        const all = keep.concat(await Promise.all((files || []).map(toFileObj)));
+        if (!all.length) throw new Error('FILES_REQUIRED');
+        if (all.length > MAX_FILES) throw new Error('TOO_MANY_FILES');
+        w.files = all; syncFirst(w);
+      }
       w.updated_at = new Date().toISOString(); save();
     },
     async delWork(w){ need(w.user_id===db.session || isAdmin()); db.works = db.works.filter(x=>x.id!==w.id); db.reactions = db.reactions.filter(r=>r.work_id!==w.id); db.comments = db.comments.filter(c=>c.work_id!==w.id); save(); },
@@ -987,6 +1045,26 @@ function LaravelApi(){
     }
     return data;
   }
+  // uploads go through XHR so the form can show progress
+  function send(method, path, fd, onProgress){
+    return new Promise((resolve, reject) => {
+      const x = new XMLHttpRequest();
+      x.open(method, base + path);
+      x.setRequestHeader('Accept', 'application/json');
+      if (token) x.setRequestHeader('Authorization', 'Bearer ' + token);
+      if (onProgress) x.upload.onprogress = e => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
+      x.onerror = () => reject(new Error('انقطع الاتصال أثناء الرفع. تحقق من الإنترنت وحاول مرة ثانية.'));
+      x.onload = () => {
+        let data = {}; try { data = JSON.parse(x.responseText || '{}'); } catch(e) {}
+        if (x.status === 401 && token) { saveToken(null); user = null; admin = false; listener && setTimeout(listener, 0); }
+        if (x.status >= 200 && x.status < 300) return resolve(data);
+        if (x.status === 413) return reject(new Error('FILES_TOO_LARGE'));
+        const first = data.errors ? Object.values(data.errors)[0]?.[0] : '';
+        reject(new Error(data.message && !/^The given data/.test(data.message) ? data.message : (first || ('HTTP ' + x.status))));
+      };
+      x.send(fd);
+    });
+  }
   async function loadMe(){
     user = null; admin = false;
     if (!token) return;
@@ -1011,7 +1089,7 @@ function LaravelApi(){
         qs.delete('login');
         history.replaceState(null, '', location.pathname + (qs.toString() ? '?' + qs : '') + location.hash);
         try { const d = await req('POST', '/auth/verify', { token: login }); saveToken(d.token); }
-        catch(e) { setTimeout(() => toast('رابط الدخول منتهي أو مستخدم، اطلب رابطًا جديدًا'), 300); }
+        catch(e) { setTimeout(() => toast('رابط الدخول غير صالح، اطلب رابطًا جديدًا من صفحة الدخول'), 300); }
       }
       await loadMe();
     },
@@ -1036,15 +1114,19 @@ function LaravelApi(){
       if (avatar) fd.append('avatar', await prep('avatar', avatar));
       await req('POST', '/me/profile', fd);
     },
-    async addWork({exercise_no, kind, url, file}){
+    async addWork({exercise_no, kind, url, files}, onProgress){
       const fd = new FormData(); fd.append('exercise_no', exercise_no); fd.append('kind', kind);
-      if (kind === 'link') fd.append('url', url); else fd.append('file', await prep(kind, file));
-      await req('POST', '/works', fd);
+      if (kind === 'link') fd.append('url', url);
+      else for (const f of files || []) fd.append('files[]', await prepWorkFile(f));
+      await send('POST', '/works', fd, onProgress);
     },
-    async updateWork(id, {exercise_no, kind, url, file}){
+    async updateWork(id, {exercise_no, kind, url, files, remove}, onProgress){
       const fd = new FormData(); fd.append('exercise_no', exercise_no);
-      if (kind) { fd.append('kind', kind); if (kind === 'link') fd.append('url', url); else fd.append('file', await prep(kind, file)); }
-      await req('POST', `/works/${id}`, fd);
+      if (kind) fd.append('kind', kind);
+      if (kind === 'link') fd.append('url', url);
+      for (const r of remove || []) fd.append('remove[]', r);
+      for (const f of files || []) fd.append('files[]', await prepWorkFile(f));
+      await send('POST', `/works/${id}`, fd, onProgress);
     },
     async delWork(w){ await req('DELETE', `/works/${w.id}`); },
     async join(tok, name){ await req('POST', '/join', { token: tok || null, name }); },
@@ -1073,7 +1155,12 @@ function errMsg(e){
     INVITE_REQUIRED:'لا يمكنك الانضمام بدون رابط دعوة.',
     NOT_LOGGED_IN:'يجب تسجيل الدخول أولًا.',
     FORBIDDEN:'ليس لديك صلاحية لهذا الإجراء.',
-    LOGIN_LINK_INVALID:'رابط الدخول منتهي أو مستخدم، اطلب رابطًا جديدًا.',
+    LOGIN_LINK_INVALID:'رابط الدخول غير صالح، اطلب رابطًا جديدًا.',
+    TOO_MANY_FILES:'الحد الأقصى 8 ملفات للتمرين الواحد.',
+    FILES_REQUIRED:'أرفق ملفًا واحدًا على الأقل.',
+    FILES_TOO_LARGE:'الحجم الكلي للملفات أكبر من 50MB.',
+    FILE_TOO_LARGE:'أحد الملفات أكبر من 50MB.',
+    UPLOAD_FAILED:'تعذّر رفع أحد الملفات، حاول مرة ثانية.',
     NOT_MEMBER:'هذا الحساب ليس عضوًا بعد. افتح رابط الدعوة من بريدك أولًا.',
     CANNOT_DELETE_SELF:'لا يمكنك حذف حسابك من هنا، استخدم صفحة حسابي.',
     'Too Many Attempts':'محاولات كثيرة، حاول بعد دقيقة.',
@@ -1234,7 +1321,8 @@ function workCard(w, showOwner=true){
   if (w.kind === 'image') th = `<div class="thumb"><img loading="lazy" src="${esc(safeUrl(w.url))}" alt="تمرين ${w.exercise_no}">`;
   else if (w.kind === 'pdf' || w.kind === 'file') th = `<div class="thumb ${w.kind}" ${isPdf(w) ? `data-pdf="${esc(safeUrl(w.url))}"` : ''}><div class="ph">${ICON.pdf}${esc(fileLabel(w))}</div>`;
   else th = `<div class="thumb link"><div class="ph">${ICON.link}${esc(domainOf(w.url))}</div>`;
-  th += `<span class="badge-no">تمرين ${esc(w.exercise_no)}</span><span class="kind-badge">${w.kind === 'image' ? 'صورة' : w.kind === 'link' ? 'رابط' : 'ملف'}</span></div>`;
+  const nf = wFiles(w).length;
+  th += `<span class="badge-no">تمرين ${esc(w.exercise_no)}</span><span class="kind-badge">${w.kind === 'link' ? 'رابط' : nf > 1 ? filesWord(nf) : w.kind === 'image' ? 'صورة' : 'ملف'}</span></div>`;
   const down = canSeeDislikes(w) ? `<span class="cnt">${ICON.down}${c.down}</span>` : '';
   const who = showOwner ? `<span class="who">${avatar(o,24)}<span>${esc(o?.full_name||'')}</span></span>` : `<span class="who"><span>${fmtDate(w.created_at)}</span></span>`;
   const u = me(), manage = !showOwner && u && (u.id === w.user_id || api.isAdmin());
@@ -1343,13 +1431,20 @@ function viewProfile(id){
   };
 }
 
+function openLightbox(src){
+  const lb = document.createElement('div'); lb.className = 'lightbox';
+  lb.innerHTML = `<button class="icon-btn close" aria-label="إغلاق"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button><img src="${esc(safeUrl(src))}" alt="">`;
+  const close = () => { lb.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  lb.onclick = close; document.addEventListener('keydown', onKey); document.body.appendChild(lb);
+}
 async function viewWork(id){
   const w = S.works.find(x => x.id === id);
   if (!w) return notFound('هذا العمل غير موجود أو تم حذفه.');
   const o = prof(w.user_id), u = me(), member = !!myProfile(), owner = u?.id === w.user_id, adm = api.isAdmin();
+  const files = wFiles(w);
   let view;
-  if (w.kind === 'image') view = `<div class="viewer"><img src="${esc(safeUrl(w.url))}" alt="تمرين ${w.exercise_no}"></div>`;
-  else if (w.kind === 'pdf' || w.kind === 'file') view = `<div class="bigtile ${w.kind}">${ICON.pdf}<b>${esc(fileLabel(w))}</b><a class="btn yellow" href="${esc(safeUrl(w.url))}" target="_blank" rel="noopener">فتح الملف</a></div>`;
+  if (w.kind !== 'link') view = `<div id="fv"></div>` + (files.length > 1 ? `<div class="fstrip" id="fstrip">${files.map((f, i) => `<button type="button" class="fthumb" data-i="${i}" title="${esc(f.name || '')}" aria-label="الملف ${i + 1}" ${fIsPdf(f) ? `data-pdf="${esc(safeUrl(f.url))}"` : ''}>${f.kind === 'image' ? `<img loading="lazy" src="${esc(safeUrl(f.url))}" alt="">` : `<span class="ph">${esc(fLabel(f))}</span>`}</button>`).join('')}</div>` : '');
   else view = `<div class="bigtile link">${ICON.link}<span class="u">${esc(w.url)}</span><a class="btn yellow" href="${esc(safeUrl(w.url))}" target="_blank" rel="noopener noreferrer">فتح الرابط</a></div>`;
   const sib = S.works.filter(x => x.user_id === w.user_id).sort((a,b)=>a.created_at.localeCompare(b.created_at));
   const ix = sib.findIndex(x => x.id === w.id), prev = sib[ix-1], next = sib[ix+1];
@@ -1387,14 +1482,16 @@ async function viewWork(id){
     });
   };
   drawReact();
-  const vimg = document.querySelector('.viewer img');
-  if (vimg) vimg.onclick = () => {
-    const lb = document.createElement('div'); lb.className = 'lightbox';
-    lb.innerHTML = `<button class="icon-btn close" aria-label="إغلاق"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button><img src="${esc(safeUrl(w.url))}" alt="">`;
-    const close = () => { lb.remove(); document.removeEventListener('keydown', esc_); };
-    const esc_ = e => { if (e.key === 'Escape') close(); };
-    lb.onclick = close; document.addEventListener('keydown', esc_); document.body.appendChild(lb);
+  const showFile = i => {
+    const f = files[i]; if (!f) return;
+    $('#fv').innerHTML = (f.kind === 'image'
+      ? `<div class="viewer"><img src="${esc(safeUrl(f.url))}" alt="تمرين ${esc(w.exercise_no)}"></div>`
+      : `<div class="bigtile ${fIsPdf(f) ? 'pdf' : 'file'}">${ICON.pdf}<b dir="auto">${esc(f.name || fileLabel(w))}</b>${f.size ? `<span class="fsz" dir="ltr">${fmtSize(f.size)}</span>` : ''}<a class="btn yellow" href="${esc(safeUrl(f.url))}" target="_blank" rel="noopener">${fIsPdf(f) ? 'فتح الملف' : 'تحميل الملف'}</a></div>`)
+      + (files.length > 1 ? `<div class="fcap"><span dir="auto">${esc(f.name || '')}</span><span>${i + 1} من ${files.length}</span></div>` : '');
+    document.querySelectorAll('#fstrip .fthumb').forEach(b => b.classList.toggle('on', +b.dataset.i === i));
+    const im = document.querySelector('#fv .viewer img'); if (im) im.onclick = () => openLightbox(f.url);
   };
+  if (files.length) { showFile(0); document.querySelectorAll('#fstrip .fthumb').forEach(b => b.onclick = () => showFile(+b.dataset.i)); }
   const drawComments = async () => {
     let list = [];
     try { list = await api.comments(w.id); } catch(e) { $('#cms').innerHTML = `<div class="notice err">${esc(errMsg(e))}</div>`; return; }
@@ -1422,63 +1519,94 @@ async function viewWork(id){
 
 function workForm(w){
   const editing = !!w;
+  const cur = editing ? wFiles(w).filter(f => f.id) : [];   // files already on the server
+  const keep = new Set(cur.map(f => f.id));
+  let picked = [], mode = editing && w.kind === 'link' ? 'link' : 'files';
   $('#app').innerHTML = `
     <a class="back" href="${editing ? '#w-'+w.id : '#u-'+me().id}">${ICON.back}رجوع</a>
     <div class="panel"><h2>${editing ? 'تعديل التمرين' : 'إضافة تمرين جديد'}</h2>
       <form id="wf">
         <label for="no">رقم التمرين</label>
         <input class="in" id="no" type="number" min="1" max="999" inputmode="numeric" required value="${editing ? esc(w.exercise_no) : ''}" style="max-width:160px">
-        ${editing ? `<label>المحتوى الحالي</label><div class="cur">${w.kind === 'image' ? `<img src="${esc(safeUrl(w.url))}" alt="">` : ''}<div><b>${w.kind === 'image' ? 'صورة' : w.kind === 'link' ? 'رابط' : esc(fileLabel(w))}</b>${w.kind === 'link' ? `<div class="hint" dir="ltr" style="margin:0;word-break:break-all">${esc(w.url)}</div>` : ''}</div></div>` : ''}
-        <label>${editing ? 'استبدال المحتوى (اختياري)' : 'نوع العمل'}</label>
-        <div id="contentBox">
-          <div class="seg" id="seg"><button type="button" data-k="image">صورة</button><button type="button" data-k="file">ملف (أي صيغة)</button><button type="button" data-k="link">رابط</button></div>
-          <div id="kindIn" style="margin-top:12px"></div>
-          ${editing ? `<div class="hint">اترك الحقل فارغًا إذا بدك تغيّر رقم التمرين بس.</div>` : ''}
-        </div>
+        <label>المحتوى</label>
+        <div class="seg" id="seg"><button type="button" data-k="files">ملفات (حتى ${MAX_FILES})</button><button type="button" data-k="link">رابط</button></div>
+        <div id="kindIn" style="margin-top:12px"></div>
         <div class="notice err" id="ferr" style="display:none;margin-top:12px"></div>
         <div class="row" style="margin-top:18px"><button class="btn" id="sbtn">${editing ? 'حفظ التعديلات' : 'نشر التمرين'}</button></div>
       </form>
     </div>`;
-  let kind = editing ? (w.kind === 'pdf' ? 'file' : w.kind) : 'image';
+  const kept = () => cur.filter(f => keep.has(f.id)).length;
+  const count = () => kept() + picked.length;
+  const thumb = (f, file) => f.kind === 'image'
+    ? `<img src="${esc(file ? URL.createObjectURL(file) : safeUrl(f.url))}" alt="">`
+    : `<span class="fe">${esc(fLabel(f))}</span>`;
+  const drawFiles = () => {
+    $('#flist').innerHTML = cur.map(f => { const on = keep.has(f.id); return `<li class="fi${on ? '' : ' gone'}">${thumb(f)}<span class="fn" dir="auto">${esc(f.name || fLabel(f))}</span>${f.size ? `<span class="fs" dir="ltr">${fmtSize(f.size)}</span>` : ''}<button type="button" class="fx" data-cur="${esc(f.id)}">${on ? 'حذف' : 'تراجع'}</button></li>`; })
+      .concat(picked.map((f, i) => `<li class="fi new">${thumb({ kind:kindOfFile(f), name:f.name }, f)}<span class="fn" dir="auto">${esc(f.name)}</span><span class="fs" dir="ltr">${fmtSize(f.size)}</span><button type="button" class="fx" data-new="${i}" aria-label="إزالة">✕</button></li>`)).join('');
+    $('#fcount').textContent = `${count()} من ${MAX_FILES}`;
+    $('#fadd').disabled = count() >= MAX_FILES;
+    $('#flist').querySelectorAll('[data-cur]').forEach(b => b.onclick = () => {
+      const id = b.dataset.cur;
+      if (keep.has(id)) keep.delete(id);
+      else if (count() < MAX_FILES) keep.add(id);
+      else return toast(`الحد الأقصى ${MAX_FILES} ملفات للتمرين الواحد`);
+      drawFiles();
+    });
+    $('#flist').querySelectorAll('[data-new]').forEach(b => b.onclick = () => { picked.splice(+b.dataset.new, 1); drawFiles(); });
+  };
+  const addPicked = list => {
+    const room = MAX_FILES - count();
+    if (list.length > room) toast(`الحد الأقصى ${MAX_FILES} ملفات للتمرين الواحد`);
+    picked = picked.concat(list.slice(0, Math.max(0, room))); drawFiles();
+  };
   const drawKind = () => {
-    $('#seg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.k === kind));
-    $('#kindIn').innerHTML = kind === 'link'
-      ? `<input class="in" id="url" type="url" dir="ltr" placeholder="https://…" value="${editing && w.kind === 'link' ? esc(w.url) : ''}"><div class="hint">مثال: رابط مشروع، رابط Canva، رابط محادثة أو موقع.</div>`
-      : `<input class="in" id="file" type="file" ${kind === 'image' ? 'accept="image/png,image/jpeg,image/webp,image/gif"' : ''}><div class="hint">${kind === 'image' ? 'PNG أو JPG أو WEBP — يتم ضغط الصورة تلقائيًا.' : 'أي صيغة: PDF، Word، PowerPoint، Excel، ZIP، فيديو، كود… الحد الأقصى 50MB.'}</div>`;
+    $('#seg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x.dataset.k === mode));
+    if (mode === 'link') {
+      $('#kindIn').innerHTML = `<input class="in" id="url" type="url" dir="ltr" placeholder="https://…" value="${editing && w.kind === 'link' ? esc(w.url) : ''}"><div class="hint">مثال: رابط مشروع، رابط Canva، رابط محادثة أو موقع.${cur.length ? ' تحويل العمل لرابط بيحذف ملفاته.' : ''}</div>`;
+      return;
+    }
+    $('#kindIn').innerHTML = `<div class="fbox" id="fbox"><div class="fhead"><b>الملفات</b><span class="fcount" id="fcount"></span></div>
+        <ul class="flist" id="flist"></ul>
+        <button type="button" class="btn ghost sm" id="fadd">+ إضافة ملفات</button><input type="file" id="fin" multiple hidden>
+        <div class="hint">صور، PDF، Word، PowerPoint، Excel، ZIP، كود… أي صيغة. حتى ${MAX_FILES} ملفات للتمرين، والحجم الكلي حتى 50MB. الصور الكبيرة تنضغط تلقائيًا. أول ملف هو صورة الغلاف.</div></div>`;
+    $('#fadd').onclick = () => $('#fin').click();
+    $('#fin').onchange = e => { addPicked([...e.target.files]); e.target.value = ''; };
+    const box = $('#fbox');
+    box.ondragover = e => { e.preventDefault(); box.classList.add('drag'); };
+    box.ondragleave = () => box.classList.remove('drag');
+    box.ondrop = e => { e.preventDefault(); box.classList.remove('drag'); addPicked([...(e.dataTransfer?.files || [])]); };
+    drawFiles();
   };
   drawKind();
-  $('#seg').querySelectorAll('button').forEach(b => b.onclick = () => { kind = b.dataset.k; drawKind(); });
+  $('#seg').querySelectorAll('button').forEach(b => b.onclick = () => { mode = b.dataset.k; drawKind(); });
   $('#wf').onsubmit = async e => {
     e.preventDefault();
     const err = m => { $('#ferr').textContent = m; $('#ferr').style.display = ''; };
     $('#ferr').style.display = 'none';
     const exercise_no = parseInt($('#no').value, 10);
     if (!(exercise_no >= 1 && exercise_no <= 999)) return err('اكتب رقم تمرين صحيح.');
-    let withContent = !editing;
-    if (editing) {
-      if (kind === 'link') { const v = ($('#url').value || '').trim(); withContent = !!v && !(w.kind === 'link' && v === w.url); }
-      else withContent = !!$('#file').files[0];
-    }
-    let data = { exercise_no };
-    if (withContent) {
-      data.kind = kind;
-      if (kind === 'link') {
-        const url = ($('#url').value || '').trim();
+    const data = { exercise_no };
+    if (mode === 'link') {
+      const url = ($('#url').value || '').trim();
+      if (!(editing && w.kind === 'link' && url === w.url)) {
         if (!/^https?:\/\/\S+\.\S+/i.test(url)) return err('اكتب رابطًا صحيحًا يبدأ بـ https://');
-        data.url = url;
-      } else {
-        const f = $('#file').files[0];
-        if (!f) return err('اختر ملفًا.');
-        if (kind === 'image' && !f.type.startsWith('image/')) return err('الملف المختار ليس صورة.');
-        if (kind === 'file' && f.size > 50*1024*1024) return err('حجم الملف أكبر من 50MB.');
-        data.file = f;
+        data.kind = 'link'; data.url = url;
       }
+    } else {
+      if (count() < 1) return err('أرفق ملفًا واحدًا على الأقل.');
+      if (count() > MAX_FILES) return err(`الحد الأقصى ${MAX_FILES} ملفات للتمرين الواحد.`);
+      const big = picked.find(f => estSize(f) > MAX_BYTES);
+      if (big) return err(`الملف "${big.name}" أكبر من 50MB.`);
+      if (picked.reduce((t, f) => t + estSize(f), 0) > MAX_BYTES) return err('الحجم الكلي للملفات الجديدة أكبر من 50MB. ارفع جزءًا منها الآن والباقي بتعديل التمرين.');
+      const remove = cur.filter(f => !keep.has(f.id)).map(f => f.id);
+      if (!editing || w.kind === 'link' || picked.length || remove.length) { data.kind = 'files'; data.files = picked; data.remove = remove; }
     }
-    const btn = $('#sbtn'); btn.disabled = true; btn.textContent = 'جاري الحفظ…';
+    const btn = $('#sbtn'), label = btn.textContent; btn.disabled = true; btn.textContent = data.files?.length ? 'جاري الرفع…' : 'جاري الحفظ…';
+    const onProgress = p => { btn.textContent = p < 1 ? `جاري الرفع ${Math.round(p * 100)}%` : 'جاري الحفظ…'; };
     try {
-      if (editing) { data.old = w; await api.updateWork(w.id, data); toast('تم حفظ التعديلات'); await refresh(false); location.hash = '#w-' + w.id; }
-      else { await api.addWork(data); toast('تم نشر التمرين 🎉'); await refresh(false); location.hash = '#u-' + me().id; }
-    } catch(er) { err(errMsg(er)); btn.disabled = false; btn.textContent = editing ? 'حفظ التعديلات' : 'نشر التمرين'; }
+      if (editing) { await api.updateWork(w.id, data, onProgress); toast('تم حفظ التعديلات'); await refresh(false); location.hash = '#w-' + w.id; }
+      else { await api.addWork(data, onProgress); toast('تم نشر التمرين 🎉'); await refresh(false); location.hash = '#u-' + me().id; }
+    } catch(er) { err(errMsg(er)); btn.disabled = false; btn.textContent = label; }
   };
 }
 
@@ -1522,7 +1650,7 @@ function viewLogin(){
     <div class="panel" style="max-width:480px;margin:10px auto">
       <h2>دخول الأعضاء</h2>
       ${pendingInvite ? `<div class="notice" style="margin-bottom:10px">لديك رابط دعوة. سجّل الدخول بنفس البريد الذي وصلتك عليه الدعوة.</div>` : ''}
-      <p class="hint" style="font-size:15px">اكتب بريدك الإلكتروني وسنرسل لك رابط دخول. افتح الرابط من بريدك فتدخل مباشرة بدون كلمة مرور.</p>
+      <p class="hint" style="font-size:15px">اكتب بريدك الإلكتروني وسنرسل لك <b>رابط دخول دائم</b>. احتفظ بالرسالة، وادخل منها في أي وقت ومن أي جهاز بدون كلمة مرور.</p>
       <form id="lf"><label for="em">البريد الإلكتروني</label><input class="in" id="em" type="email" dir="ltr" required placeholder="name@gmail.com">
       <div class="row" style="margin-top:14px"><button class="btn" id="lbtn">${api.demo ? 'دخول (معاينة)' : 'أرسل رابط الدخول'}</button></div></form>
       <div id="lmsg" style="margin-top:12px"></div>
