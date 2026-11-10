@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\LoginToken;
 use App\Models\User;
+use App\Support\Claude;
 use App\Support\Notices;
 use App\Support\PasswordResets;
 use Illuminate\Http\Request;
@@ -139,6 +140,7 @@ class AuthController extends Controller
             'is_admin' => $user->isAdmin(),
             'is_member' => $user->isMember(),
             'pending_requests' => $user->isAdmin() ? User::where('status', 'pending')->count() : 0,
+            'ai' => Claude::enabled(),
         ]);
     }
 

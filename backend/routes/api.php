@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AssistantController;
+use App\Http\Controllers\GradeController;
+use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\FileController;
@@ -39,6 +42,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('me', [ProfileController::class, 'destroy']);
 
     Route::get('notifications', [NotificationController::class, 'index']);
+
+    // grades: own works (admins: all) · Claude reviews: owner or admin · assistant: members and admins
+    Route::get('grades', [GradeController::class, 'index']);
+    Route::get('works/{work}/reviews', [ReviewController::class, 'index']);
+    Route::post('works/{work}/reviews', [ReviewController::class, 'store'])->middleware('throttle:6,1');
+    Route::get('materials', [AssistantController::class, 'materials']);
+    Route::post('assistant', [AssistantController::class, 'ask'])->middleware('throttle:10,1');
     Route::post('notifications/read', [NotificationController::class, 'read']);
 
     // owner or admin (checked inside)
@@ -61,5 +71,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('requests/{user}/reject', [AdminController::class, 'reject']);
         Route::delete('members/{profile}', [AdminController::class, 'deleteMember']);
         Route::put('exercises/{no}', [AdminController::class, 'saveExercise'])->whereNumber('no');
+        Route::put('works/{work}/grade', [GradeController::class, 'upsert']);
+        Route::delete('works/{work}/grade', [GradeController::class, 'destroy']);
+        Route::post('materials', [AssistantController::class, 'store']);
+        Route::put('materials/{material}', [AssistantController::class, 'update']);
+        Route::delete('materials/{material}', [AssistantController::class, 'destroy']);
     });
 });

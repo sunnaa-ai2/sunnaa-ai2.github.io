@@ -22,6 +22,14 @@ return [
     // Max upload size in kilobytes (default 50 MB): per file, and for all files of one submission together.
     'max_upload_kb' => (int) env('MAX_UPLOAD_KB', 51200),
 
+    // Claude features (submission review, course assistant). Off while ANTHROPIC_API_KEY is empty.
+    'ai' => [
+        'key' => env('ANTHROPIC_API_KEY'),
+        'model' => env('AI_MODEL', 'claude-haiku-5-5'),
+        'reviews_per_day' => (int) env('AI_REVIEWS_PER_DAY', 3),
+        'questions_per_day' => (int) env('AI_QUESTIONS_PER_DAY', 30),
+    ],
+
     // Files one exercise submission can hold.
     'max_files' => (int) env('MAX_FILES_PER_WORK', 8),
 ];

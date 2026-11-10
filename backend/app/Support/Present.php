@@ -2,7 +2,10 @@
 
 namespace App\Support;
 
+use App\Models\AiReview;
 use App\Models\AppNotification;
+use App\Models\CourseMaterial;
+use App\Models\Grade;
 use App\Models\Comment;
 use App\Models\Exercise;
 use App\Models\Profile;
@@ -76,6 +79,30 @@ class Present
         return [
             'id' => $u->id, 'username' => $u->username, 'full_name' => $u->requested_name, 'email' => $u->email,
             'created_at' => $u->created_at?->toIso8601ZuluString('millisecond'),
+        ];
+    }
+
+    public static function grade(Grade $g): array
+    {
+        return [
+            'work_id' => $g->work_id, 'score' => $g->score, 'comment' => $g->comment,
+            'updated_at' => $g->updated_at?->toIso8601ZuluString('millisecond'),
+        ];
+    }
+
+    public static function review(AiReview $r): array
+    {
+        return [
+            'id' => $r->id, 'work_id' => $r->work_id, 'user_id' => $r->user_id, 'body' => $r->body,
+            'created_at' => $r->created_at?->toIso8601ZuluString('millisecond'),
+        ];
+    }
+
+    public static function material(CourseMaterial $m): array
+    {
+        return [
+            'id' => $m->id, 'position' => $m->position, 'title' => $m->title, 'body' => $m->body,
+            'updated_at' => $m->updated_at?->toIso8601ZuluString('millisecond'),
         ];
     }
 

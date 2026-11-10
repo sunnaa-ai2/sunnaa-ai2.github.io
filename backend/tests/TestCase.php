@@ -20,7 +20,7 @@ abstract class TestCase extends BaseTestCase
 
     protected function user(string $email): User
     {
-        return User::create(['email' => $email, 'email_verified_at' => now()]);
+        return User::firstOrCreate(['email' => $email], ['email_verified_at' => now()]);
     }
 
     protected function member(string $email, string $name = 'Member'): User
