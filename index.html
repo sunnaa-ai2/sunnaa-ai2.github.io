@@ -725,6 +725,22 @@ footer.ft .wrap{display:block!important}
 .seg a{display:inline-block;padding:7px 14px;border-radius:9px;font-weight:700;color:var(--muted);text-decoration:none}
 .seg a.on{background:var(--ember,#ff2e3b);color:#fff}
 .pwt{flex:none}
+.md h4{margin:14px 0 6px;font-size:16px}.md h4:first-child{margin-top:0}
+.md ul,.md ol{margin:4px 0 8px;padding-inline-start:22px}.md li{margin:3px 0;line-height:1.85}.md p{margin:6px 0;line-height:1.85}
+.md code{font-family:var(--f-mono,monospace);background:var(--card2);padding:1px 5px;border-radius:5px;font-size:.92em}
+.review{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:var(--card2);margin-top:12px}
+.review time{display:block;color:var(--muted);font-size:12px;margin-bottom:8px}
+.private{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-weight:600}
+.gbox{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.gscore{font:800 40px/1 var(--f-display,inherit);color:var(--ember,#ff2e3b)}.gscore small{font-size:18px;color:var(--muted)}
+.cnt.gchip{color:var(--ember,#ff2e3b);font-weight:800}
+.chat{display:flex;flex-direction:column;gap:10px;min-height:220px;max-height:58vh;overflow-y:auto;padding:4px 2px 10px}
+.msg{max-width:88%;border-radius:16px;padding:10px 14px;line-height:1.85;word-wrap:break-word}
+.msg.user{align-self:flex-start;background:var(--ember,#ff2e3b);color:#fff;border-start-start-radius:4px}
+.msg.bot{align-self:flex-end;background:var(--card2);border:1px solid var(--line);border-start-end-radius:4px}
+.msg.wait{opacity:.7}
+.chatin{display:flex;gap:8px;align-items:flex-end}.chatin textarea{flex:1;min-height:48px;max-height:160px;resize:vertical}
+.mlist{display:flex;flex-direction:column;gap:8px}.mitem{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card2)}
 </style>
 </head>
 <body>
@@ -837,7 +853,7 @@ const toDataUrl = blob => new Promise((res,rej)=>{ const r=new FileReader(); r.o
    Backend 1: وضع المعاينة (بيانات تجريبية في المتصفح)
    ========================================================= */
 function MockApi(){
-  const KEY = 'spark_ai2_demo_v4';
+  const KEY = 'spark_ai2_demo_v5';
   const ADMINS = ['abed@example.com','ahmed@example.com'];
   let db, listener = null;
   const art = (n, c1, c2) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="800" height="600" fill="url(#g)"/><circle cx="640" cy="140" r="90" fill="#fff" opacity=".18"/><circle cx="160" cy="470" r="130" fill="#fff" opacity=".12"/><rect x="230" y="220" width="340" height="160" rx="24" fill="#fff" opacity=".9"/><text x="400" y="318" font-family="Tahoma,Arial" font-size="54" font-weight="700" text-anchor="middle" fill="${c1}">تصميم ${n}</text></svg>`);
@@ -885,7 +901,18 @@ function MockApi(){
       {id:rid(),user_id:U.abed,actor_id:U.sara,kind:'like',work_id:works[2].id,created_at:new Date(now-3*day).toISOString(),read_at:null},
       {id:rid(),user_id:U.abed,actor_id:U.mo,kind:'like',work_id:works[0].id,created_at:new Date(now-11*day).toISOString(),read_at:new Date(now-10*day).toISOString()},
     ];
-    return {users,profiles,works,reactions,comments,exercises,notifs,session:null};
+    const grades = [
+      {work_id:works[0].id, score:8, comment:'تصميم مرتب والألوان متناسقة. جرّب تكبّر الشعار شوي بالنسخة الجاية.', updated_at:new Date(now-9*day).toISOString()},
+      {work_id:works[3].id, score:9, comment:'ممتاز! الهوية واضحة ومتكاملة.', updated_at:new Date(now-10*day).toISOString()},
+    ];
+    const reviews = [
+      {id:rid(), work_id:works[2].id, user_id:U.abed, created_at:new Date(now-3*day).toISOString(), body:'## ✅ ما هو جيد\n- قدّمت أكثر من نسخة للتصميم، وهذا بيبين إنك جرّبت اتجاهات مختلفة.\n- الألوان الدافئة متناسقة مع بعض.\n## ⚠️ ما ينقص\n- ما في شرح قصير لفكرة كل نسخة وليش اخترتها.\n- ملف الملاحظات فاضي تقريبًا.\n## 💡 كيف تحسّن\n- أضف سطرين لكل نسخة: الفكرة والجمهور المستهدف.\n- اطلب من Claude يقارن النسختين ويقترح وحدة يطوّرها معك.'},
+    ];
+    const materials = [
+      {id:rid(), position:1, title:'المحاضرة 1: أساسيات كتابة البرومبت', updated_at:new Date(now-12*day).toISOString(), body:'البرومبت الجيد يحدد الدور والمهمة والسياق وشكل الإجابة المطلوب.\nابدأ بجملة واضحة عن المطلوب، ثم أضف السياق: من الجمهور وما الهدف.\nأعطِ مثالًا على الشكل الذي تريده للإجابة.\nاطلب من Claude أن يسألك إذا كانت المعلومات ناقصة.\nجرّب وعدّل: البرومبت الأول نادرًا ما يكون الأفضل.'},
+      {id:rid(), position:2, title:'المحاضرة 2: Claude في التصميم والهوية البصرية', updated_at:new Date(now-8*day).toISOString(), body:'يمكن استخدام Claude لتوليد أفكار الهوية البصرية: اسم المشروع والشعار والألوان والخطوط.\nاطلب ثلاث اتجاهات مختلفة، ثم اختر واحدًا وطوّره.\nحدّد الألوان بأكواد HEX.\nاطلب من Claude أن يشرح سبب كل اختيار.\nنفّذ التصميم النهائي بأداة مثل Canva أو Figma.'},
+    ];
+    return {users,profiles,works,reactions,comments,exercises,notifs,grades,reviews,materials,session:null};
   }
   try { db = JSON.parse(localStorage.getItem(KEY)); } catch(e) { db = null; }
   if (!db || !db.users) db = seed();
@@ -935,6 +962,44 @@ function MockApi(){
       db.users.push({id:rid(), email, username, password, status:'pending', requested_name:full_name.trim(), created_at:new Date().toISOString()}); save();
     },
     async forgot(){},
+    aiEnabled: () => true,
+    async grades(){ const uid = db.session; if (!uid) return []; return db.grades.filter(g => isAdmin() || db.works.find(w => w.id === g.work_id)?.user_id === uid); },
+    async saveGrade(workId, score, comment){
+      need(isAdmin()); if (!(score >= 0 && score <= 10)) throw new Error('GRADE_INVALID');
+      const w = db.works.find(x => x.id === workId); need(w);
+      db.grades = db.grades.filter(g => g.work_id !== workId);
+      const g = {work_id:workId, score, comment:comment || null, updated_at:new Date().toISOString()}; db.grades.push(g);
+      db.notifs = db.notifs.filter(n => !(n.kind === 'grade' && n.work_id === workId));
+      if (w.user_id !== db.session) db.notifs.push({id:rid(),user_id:w.user_id,actor_id:isMember() ? db.session : null,kind:'grade',work_id:workId,created_at:new Date().toISOString(),read_at:null});
+      save(); return g;
+    },
+    async delGrade(workId){ need(isAdmin()); db.grades = db.grades.filter(g => g.work_id !== workId); save(); },
+    async reviews(workId){ const w = db.works.find(x => x.id === workId); need(w && (w.user_id === db.session || isAdmin())); return db.reviews.filter(r => r.work_id === workId).sort((a,b) => b.created_at.localeCompare(a.created_at)); },
+    async requestReview(workId){
+      const w = db.works.find(x => x.id === workId); need(w && (w.user_id === db.session || isAdmin()));
+      await new Promise(r => setTimeout(r, 1400));
+      const fs = wFiles(w), ex = db.exercises.find(e => e.no === w.exercise_no), imgs = fs.filter(f => f.kind === 'image').length;
+      const body = `## ✅ ما هو جيد\n- ${w.kind === 'link' ? 'شاركت رابطًا واضحًا للحل' : `رفعت ${fs.length > 1 ? filesWord(fs.length) : 'ملفًا'} للتمرين ${w.exercise_no}`}${ex ? ` («${ex.title}»)` : ''}.\n${imgs ? `- الصور واضحة وبتبين الفكرة بسرعة.\n` : ''}## ⚠️ ما ينقص\n- ${ex ? 'راجع مطلوب التمرين وتأكد إنك غطيت كل نقطة فيه.' : 'ما في وصف مكتوب للتمرين، فصعب أتأكد إنك غطيت كل المطلوب.'}\n- ما في شرح قصير لطريقتك والبرومبت اللي استخدمته.\n## 💡 كيف تحسّن\n- أضف ملف نصي فيه البرومبت اللي استخدمته مع Claude ونتيجته.\n- اكتب سطرين عن أصعب جزء وكيف حلّيته.\n\n(مراجعة تجريبية في وضع المعاينة؛ الحقيقية بيكتبها Claude بعد ما يقرأ ملفاتك.)`;
+      const r = {id:rid(), work_id:workId, user_id:db.session, body, created_at:new Date().toISOString()}; db.reviews.push(r); save(); return r;
+    },
+    async materials(){ need(isMember() || isAdmin()); return [...db.materials].sort((a,b) => a.position - b.position); },
+    async saveMaterial(m){
+      need(isAdmin()); if (!m.title || m.title.trim().length < 2) throw new Error('MATERIAL_TITLE'); if (!m.body || m.body.trim().length < 10) throw new Error('MATERIAL_BODY');
+      const x = m.id && db.materials.find(y => y.id === m.id);
+      if (x) Object.assign(x, {title:m.title.trim(), body:m.body, updated_at:new Date().toISOString()});
+      else db.materials.push({id:rid(), position:db.materials.length + 1, title:m.title.trim(), body:m.body, updated_at:new Date().toISOString()});
+      save();
+    },
+    async delMaterial(id){ need(isAdmin()); db.materials = db.materials.filter(m => m.id !== id); save(); },
+    async ask(messages){
+      need(isMember() || isAdmin()); if (!db.materials.length) throw new Error('NO_MATERIALS');
+      await new Promise(r => setTimeout(r, 1100));
+      const q = messages[messages.length - 1].content, words = q.split(/[\s،؟?.!,]+/).filter(x => x.length >= 3);
+      const scored = db.materials.map(m => ({ m, n: words.filter(x => m.body.includes(x) || m.title.includes(x)).length })).sort((a,b) => b.n - a.n);
+      if (!scored[0].n) return 'هذا غير موجود في مواد الدورة، اسأل المدرب.\n\n(إجابة تجريبية في وضع المعاينة.)';
+      const lines = scored[0].m.body.split('\n').filter(l => words.some(x => l.includes(x))).slice(0, 3);
+      return `حسب «${scored[0].m.title}»:\n${(lines.length ? lines : scored[0].m.body.split('\n').slice(0, 2)).map(l => '- ' + l).join('\n')}\n\n(إجابة تجريبية في وضع المعاينة؛ الحقيقية بيكتبها Claude من مواد الدورة.)`;
+    },
     async resetPassword(){ throw new Error('RESET_LINK_INVALID'); },
     async changePassword(current, password){
       const u = me(); need(u);
@@ -1043,7 +1108,7 @@ function MockApi(){
 function LaravelApi(){
   const base = CONFIG.API_URL.replace(/\/+$/, '') + '/api';
   const TK = 'spark_api_token';
-  let token = null, user = null, admin = false, pending = 0, listener = null;
+  let token = null, user = null, admin = false, pending = 0, ai = false, listener = null;
   try { token = localStorage.getItem(TK); } catch(e) {}
   const saveToken = t => { token = t; try { t ? localStorage.setItem(TK, t) : localStorage.removeItem(TK); } catch(e) {} };
   async function req(method, path, body){
@@ -1085,7 +1150,7 @@ function LaravelApi(){
   async function loadMe(){
     user = null; admin = false;
     if (!token) return;
-    try { const d = await req('GET', '/me'); user = { id:d.user.id, email:(d.user.email || '').toLowerCase(), username:d.user.username || null }; admin = !!d.is_admin; pending = d.pending_requests || 0; }
+    try { const d = await req('GET', '/me'); user = { id:d.user.id, email:(d.user.email || '').toLowerCase(), username:d.user.username || null }; admin = !!d.is_admin; pending = d.pending_requests || 0; ai = !!d.ai; }
     catch(e) { if (!token) return; }
   }
   async function prep(kind, file){
@@ -1104,6 +1169,16 @@ function LaravelApi(){
     user: () => user,
     isAdmin: () => admin,
     pendingRequests: () => admin ? pending : 0,
+    aiEnabled: () => ai,
+    grades: () => req('GET', '/grades'),
+    async saveGrade(workId, score, comment){ return req('PUT', `/admin/works/${workId}/grade`, { score, comment: comment || null }); },
+    async delGrade(workId){ await req('DELETE', `/admin/works/${workId}/grade`); },
+    reviews: workId => req('GET', `/works/${workId}/reviews`),
+    requestReview: workId => req('POST', `/works/${workId}/reviews`),
+    materials: () => req('GET', '/materials'),
+    saveMaterial: m => m.id ? req('PUT', `/admin/materials/${m.id}`, { title:m.title, body:m.body }) : req('POST', '/admin/materials', { title:m.title, body:m.body }),
+    async delMaterial(id){ await req('DELETE', `/admin/materials/${id}`); },
+    async ask(messages){ return (await req('POST', '/assistant', { messages })).answer; },
     async login(login, password){ const d = await req('POST', '/auth/login', { login: login.trim(), password }); saveToken(d.token); await loadMe(); fire(); },
     async register(f){ await req('POST', '/auth/register', { full_name:f.full_name.trim(), username:f.username.trim(), email:f.email.trim(), password:f.password }); },
     async forgot(email){ await req('POST', '/auth/forgot', { email: email.trim() }); },
@@ -1155,7 +1230,7 @@ function LaravelApi(){
    الحالة والواجهة
    ========================================================= */
 let api;
-const S = { profiles:[], works:[], reactions:[], ccount:{}, cby:{}, exercises:[], notifs:[], loaded:false };
+const S = { profiles:[], works:[], reactions:[], ccount:{}, cby:{}, exercises:[], notifs:[], grades:{}, loaded:false };
 let resetToken = null;   // from ?reset=TOKEN in a password e-mail
 
 function errMsg(e){
@@ -1173,6 +1248,15 @@ function errMsg(e){
     RESET_LINK_INVALID:'رابط تعيين كلمة المرور منتهي أو مستخدم. اطلب رابطًا جديدًا.',
     WRONG_PASSWORD:'كلمة المرور الحالية غير صحيحة.',
     REQUEST_NOT_PENDING:'هذا الطلب تمت معالجته من قبل.',
+    AI_DISABLED:'ميزات Claude مش مفعّلة على السيرفر بعد.',
+    AI_DAILY_LIMIT:'وصلت للحد اليومي لطلبات Claude. جرّب بكرة.',
+    AI_BUSY:'Claude مشغول هلأ، حاول بعد دقيقة.',
+    AI_UNAVAILABLE:'تعذّر الوصول لـ Claude، حاول بعد شوي.',
+    NO_MATERIALS:'ما في مواد للدورة بعد. لازم المسؤول يضيف ملخصات المحاضرات أول.',
+    GRADE_INVALID:'العلامة لازم تكون من 0 لـ 10.',
+    MATERIAL_TITLE:'اكتب عنوان للمادة.',
+    MATERIAL_BODY:'محتوى المادة قصير جدًا أو طويل جدًا (حتى 60 ألف حرف).',
+    BAD_CONVERSATION:'صار خلل بالمحادثة، ابدأ محادثة جديدة.',
     NOT_LOGGED_IN:'يجب تسجيل الدخول أولًا.',
     FORBIDDEN:'ليس لديك صلاحية لهذا الإجراء.',
     TOO_MANY_FILES:'الحد الأقصى 8 ملفات للتمرين الواحد.',
@@ -1222,14 +1306,33 @@ function counts(workId){
 function canSeeDislikes(w){ const u = me(); return !!u && (u.id === w.user_id || api.isAdmin()); }
 
 async function loadAll(){
-  const [profiles, works, reactions, crows, exercises, notifs] = await Promise.all([
+  const [profiles, works, reactions, crows, exercises, notifs, grades] = await Promise.all([
     api.profiles(), api.works(), api.reactions(), api.commentRows(),
-    api.exercises().catch(() => []), (api.user() ? api.notifications().catch(() => []) : Promise.resolve([]))]);
+    api.exercises().catch(() => []), (api.user() ? api.notifications().catch(() => []) : Promise.resolve([])),
+    (api.user() ? api.grades().catch(() => []) : Promise.resolve([]))]);
+  S.grades = Object.fromEntries(grades.map(g => [g.work_id, g]));
   const ccount = {}, cby = {};
   crows.forEach(r => { ccount[r.work_id] = (ccount[r.work_id]||0)+1; cby[r.user_id] = (cby[r.user_id]||0)+1; });
   Object.assign(S, { profiles, works, reactions, ccount, cby, exercises, notifs, loaded:true });
 }
 
+
+const aiOn = () => !!(api.aiEnabled && api.aiEnabled());
+// small, safe markdown for Claude's answers: headings, bullet / numbered lists, **bold**, `code`
+function mdLite(t){
+  const out = []; let list = null;
+  const inline = x => esc(x).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<code>$1</code>');
+  const close = () => { if (list) { out.push(`</${list}>`); list = null; } };
+  String(t || '').split('\n').forEach(line => {
+    const l = line.trim(); let m;
+    if (!l || /^```/.test(l)) { close(); return; }
+    if ((m = /^#{1,4}\s+(.*)$/.exec(l))) { close(); out.push(`<h4>${inline(m[1])}</h4>`); return; }
+    if ((m = /^[-•*]\s+(.*)$/.exec(l))) { if (list !== 'ul') { close(); out.push('<ul>'); list = 'ul'; } out.push(`<li>${inline(m[1])}</li>`); return; }
+    if ((m = /^\d+[.)]\s+(.*)$/.exec(l))) { if (list !== 'ol') { close(); out.push('<ol>'); list = 'ol'; } out.push(`<li>${inline(m[1])}</li>`); return; }
+    close(); out.push(`<p>${inline(l)}</p>`);
+  });
+  close(); return out.join('');
+}
 
 /* ---------- stats / badges ---------- */
 function userStats(id){
@@ -1301,6 +1404,7 @@ function renderNav(){
   let h = `<a href="#home">الرئيسية</a>`;
   if (p) h += `<a href="#u-${p.id}">صفحتي</a><a href="#add" class="pill">+ إضافة تمرين</a>`;
   const nreq = api.pendingRequests ? api.pendingRequests() : 0, rb = nreq ? ` <span class="nbadge">${nreq > 9 ? '9+' : nreq}</span>` : '';
+  if ((p || adm) && aiOn()) h += `<a href="#assistant">مساعد الدورة</a>`;
   if (adm) h += `<a href="#admin">لوحة التحكم${rb}</a>`;
   if (u) h += `<a href="#me">حسابي</a><button id="logoutBtn">خروج</button>`;
   else h += `<a href="#register">حساب جديد</a><a href="#login" class="pill">دخول الأعضاء</a>`;
@@ -1308,6 +1412,7 @@ function renderNav(){
   const cur = location.hash || '#home', on = x => cur === x ? 'on' : '';
   let b = `<a href="#home" class="${on('#home')}">${ICON.home}الرئيسية</a>`;
   if (p) b += `<a href="#u-${p.id}" class="${on('#u-'+p.id)}">${ICON.user}صفحتي</a><a href="#add" class="plus" aria-label="إضافة تمرين">${ICON.plus}</a>`;
+  if ((p || adm) && aiOn()) b += `<a href="#assistant" class="${on('#assistant')}">${ICON.cm}المساعد</a>`;
   if (adm) b += `<a href="#admin" class="${on('#admin')}">${ICON.shield}التحكم${rb}</a>`;
   b += u ? `<a href="#me" class="${on('#me')}">${ICON.gear}حسابي</a>` : `<a href="#login" class="${on('#login')}">${ICON.login}دخول</a>`;
   $('#bnav').innerHTML = b;
@@ -1341,7 +1446,7 @@ function workCard(w, showOwner=true){
   else th = `<div class="thumb link"><div class="ph">${ICON.link}${esc(domainOf(w.url))}</div>`;
   const nf = wFiles(w).length;
   th += `<span class="badge-no">تمرين ${esc(w.exercise_no)}</span><span class="kind-badge">${w.kind === 'link' ? 'رابط' : nf > 1 ? filesWord(nf) : w.kind === 'image' ? 'صورة' : 'ملف'}</span></div>`;
-  const down = canSeeDislikes(w) ? `<span class="cnt">${ICON.down}${c.down}</span>` : '';
+  const down = (canSeeDislikes(w) ? `<span class="cnt">${ICON.down}${c.down}</span>` : '') + (S.grades[w.id] ? `<span class="cnt gchip" title="علامة المدرب — تظهر لك فقط">★ ${S.grades[w.id].score}/10</span>` : '');
   const who = showOwner ? `<span class="who">${avatar(o,24)}<span>${esc(o?.full_name||'')}</span></span>` : `<span class="who"><span>${fmtDate(w.created_at)}</span></span>`;
   const u = me(), manage = !showOwner && u && (u.id === w.user_id || api.isAdmin());
   const acts = manage ? `<div class="wacts">${u.id === w.user_id ? `<a class="btn ghost sm" href="#edit-${w.id}">تعديل</a>` : ''}<button class="btn warn sm" data-delwork="${w.id}">حذف</button></div>` : '';
@@ -1456,6 +1561,52 @@ function openLightbox(src){
   const onKey = e => { if (e.key === 'Escape') close(); };
   lb.onclick = close; document.addEventListener('keydown', onKey); document.body.appendChild(lb);
 }
+// the trainer's private mark and Claude's feedback, under a submission (owner and admins only)
+function drawCoach(w, owner, adm){
+  const box = $('#coach'); if (!box) return;
+  const g = S.grades[w.id];
+  let html = '';
+  if (adm) html += `<div class="panel" style="margin-top:16px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">تقييم المدرب</h2><span class="private">🔒 يظهر لصاحب التمرين فقط</span></div>
+    <form id="gf" style="margin-top:12px"><div class="row"><label for="gs" style="margin:0">العلامة</label>
+      <select class="in" id="gs" style="width:auto">${[...Array(11).keys()].map(n => `<option value="${n}" ${g && g.score === n ? 'selected' : ''}>${n}</option>`).join('')}</select><span class="hint" style="margin:0">من 10</span></div>
+      <label for="gc">ملاحظة للمتدرب (اختياري)</label><textarea class="in" id="gc" maxlength="2000" placeholder="شو منيح، وشو لازم يحسّن…">${esc(g?.comment || '')}</textarea>
+      <div class="row" style="margin-top:10px"><button class="btn" id="gbtn">${g ? 'تحديث التقييم' : 'حفظ التقييم'}</button>${g ? `<button type="button" class="btn ghost" id="gdel">حذف التقييم</button>` : ''}</div></form></div>`;
+  else if (owner) html += `<div class="panel" style="margin-top:16px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">تقييم المدرب</h2><span class="private">🔒 يظهر لك فقط</span></div>
+    ${g ? `<div class="gbox" style="margin-top:12px"><div class="gscore" dir="ltr">${esc(g.score)}<small>/10</small></div>${g.comment ? `<p style="margin:0;flex:1;min-width:200px;line-height:1.9">${esc(g.comment)}</p>` : ''}</div><div class="hint">${fmtDate(g.updated_at)}</div>`
+         : `<p class="hint" style="margin:10px 0 0">لسا ما انقيّم هذا التمرين. لما يقيّمه المدرب بيوصلك إشعار.</p>`}</div>`;
+  if (aiOn()) html += `<div class="panel" style="margin-top:16px"><div class="row" style="justify-content:space-between"><h2 style="margin:0">مراجعة Claude</h2><span class="private">🔒 لصاحب التمرين والمدربين</span></div>
+    <p class="hint" style="margin:8px 0 0">Claude بيقرأ وصف التمرين وملفاتك، وبيقلك شو منيح، وشو ناقص، وكيف تحسّن، قبل ما يوصل للمدرب.</p>
+    ${owner ? `<div class="row" style="margin-top:12px"><button class="btn" id="rvBtn">✨ اطلب مراجعة من Claude</button><span class="hint" style="margin:0">حتى 3 مراجعات باليوم</span></div>` : ''}
+    <div id="rvList"><div class="hint" style="margin-top:10px">جاري التحميل…</div></div></div>`;
+  box.innerHTML = html;
+
+  const gf = $('#gf');
+  if (gf) gf.onsubmit = async e => {
+    e.preventDefault(); const btn = $('#gbtn'); btn.disabled = true;
+    try { const ng = await api.saveGrade(w.id, +$('#gs').value, $('#gc').value.trim()); S.grades[w.id] = ng; toast('تم حفظ التقييم ✅'); drawCoach(w, owner, adm); }
+    catch(er) { toast(errMsg(er)); btn.disabled = false; }
+  };
+  const gd = $('#gdel');
+  if (gd) gd.onclick = async () => {
+    if (!await confirmBox('حذف تقييم هذا التمرين؟', 'حذف')) return;
+    try { await api.delGrade(w.id); delete S.grades[w.id]; drawCoach(w, owner, adm); } catch(er) { toast(errMsg(er)); }
+  };
+  if (!aiOn()) return;
+  const drawReviews = async () => {
+    let list; try { list = await api.reviews(w.id); } catch(e) { $('#rvList').innerHTML = `<div class="notice err" style="margin-top:10px">${esc(errMsg(e))}</div>`; return; }
+    $('#rvList').innerHTML = list.length ? list.map(r => `<div class="review"><time>${fmtDate(r.created_at)}</time><div class="md">${mdLite(r.body)}</div></div>`).join('')
+      : `<p class="hint" style="margin-top:10px">${owner ? 'ما طلبت مراجعة لهذا التمرين بعد.' : 'صاحب التمرين ما طلب مراجعة بعد.'}</p>`;
+  };
+  drawReviews();
+  const rb = $('#rvBtn');
+  if (rb) rb.onclick = async () => {
+    rb.disabled = true; rb.textContent = 'Claude بيقرأ تمرينك…';
+    try { await api.requestReview(w.id); await drawReviews(); toast('وصلت ملاحظات Claude ✨'); }
+    catch(er) { toast(errMsg(er)); }
+    rb.disabled = false; rb.textContent = '✨ اطلب مراجعة من Claude';
+  };
+}
+
 async function viewWork(id){
   const w = S.works.find(x => x.id === id);
   if (!w) return notFound('هذا العمل غير موجود أو تم حذفه.');
@@ -1479,6 +1630,7 @@ async function viewWork(id){
         <a class="exlink" href="#ex-${w.exercise_no}">${ICON.grid} كل حلول تمرين ${esc(w.exercise_no)}${exTitle(w.exercise_no) ? ' — ' + esc(exTitle(w.exercise_no)) : ''} ${ICON.fwd}</a>
       </div>
     </div>
+    ${owner || adm ? `<div id="coach"></div>` : ''}
     <div class="panel" style="margin-top:16px"><h2>التعليقات</h2>
       <div class="comments" id="cms"><div class="hint">جاري التحميل…</div></div>
       ${member ? `<form id="cf" style="margin-top:14px"><textarea class="in" id="cbody" maxlength="1000" placeholder="اكتب تعليقًا…" required></textarea><div class="row" style="margin-top:8px"><button class="btn">نشر التعليق</button></div></form>`
@@ -1524,6 +1676,7 @@ async function viewWork(id){
     });
   };
   drawComments();
+  if (owner || adm) drawCoach(w, owner, adm);
   const cf = $('#cf');
   if (cf) cf.onsubmit = async e => {
     e.preventDefault(); const body = $('#cbody').value.trim(); if (!body) return;
@@ -1814,10 +1967,63 @@ async function viewAdmin(){
   if (!api.isAdmin()) return notFound('هذه الصفحة للمسؤولين فقط.');
   $('#app').innerHTML = `
     <div class="panel"><h2>طلبات الانضمام</h2><div id="rlist" class="hint">جاري التحميل…</div></div>
+    <div class="panel"><h2>بانتظار التقييم</h2><div id="ungraded"></div></div>
+    <div class="panel"><h2>مواد الدورة</h2>
+      <p class="hint" style="margin-top:0">ملخصات المحاضرات اللي بيجاوب منها «مساعد الدورة». بتقدر تكتبها، أو ترفع ملف نصي أو PDF وبنطلّع النص منه.</p>
+      <div id="mlist" class="mlist"></div>
+      <form id="mf" style="margin-top:14px"><input type="hidden" id="mid">
+        <label for="mt">العنوان</label><input class="in" id="mt" maxlength="120" placeholder="المحاضرة 3: …" required>
+        <label for="mb">المحتوى</label><textarea class="in" id="mb" style="min-height:180px" placeholder="الصق ملخص المحاضرة هون…" required></textarea>
+        <div class="row" style="margin-top:10px"><button class="btn" id="mbtn">إضافة المادة</button><button type="button" class="btn ghost" id="mfileB">رفع ملف (txt / md / pdf)</button><input type="file" id="mfile" accept=".txt,.md,.pdf,text/plain,application/pdf" hidden><button type="button" class="btn ghost" id="mcancel" hidden>إلغاء التعديل</button></div>
+      </form>
+    </div>
     <div class="panel"><h2>الأعضاء (${S.profiles.length})</h2>
       <table class="table"><tbody>${S.profiles.map(p => `<tr><td><a class="row" href="#u-${p.id}" style="color:inherit">${avatar(p,32)}<b>${esc(p.full_name)}</b></a></td><td style="color:var(--muted)">${S.works.filter(w=>w.user_id===p.id).length} عمل</td></tr>`).join('') || '<tr><td>لا يوجد أعضاء بعد.</td></tr>'}</tbody></table>
       <p class="hint">لإزالة عضو افتح صفحته واضغط "إزالة العضو".</p>
     </div>`;
+  const ung = S.works.filter(w => !S.grades[w.id]).sort((a,b) => a.created_at.localeCompare(b.created_at));
+  $('#ungraded').innerHTML = ung.length ? `<table class="table"><tbody>${ung.slice(0, 30).map(w => { const o = prof(w.user_id); return `<tr><td><a class="row" href="#w-${w.id}" style="color:inherit">${avatar(o,28)}<b>${esc(o?.full_name || '')}</b></a></td><td>تمرين ${esc(w.exercise_no)}</td><td class="hint" style="margin:0">${fmtDate(w.created_at)}</td><td><a class="btn ghost sm" href="#w-${w.id}">قيّم</a></td></tr>`; }).join('')}</tbody></table>${ung.length > 30 ? `<p class="hint">و${ung.length - 30} غيرهم…</p>` : ''}`
+    : '<p class="hint" style="margin:0">كل التسليمات مقيّمة ✅</p>';
+  let mats = [];
+  const drawMats = async () => {
+    try { mats = await api.materials(); } catch(e) { $('#mlist').innerHTML = `<div class="notice err">${esc(errMsg(e))}</div>`; return; }
+    $('#mlist').innerHTML = mats.length ? mats.map(m => `<div class="mitem"><div><b>${esc(m.title)}</b><div class="hint" style="margin:2px 0 0">${m.body.length.toLocaleString('ar')} حرف</div></div><div class="row" style="flex:none"><button class="btn ghost sm" data-medit="${esc(m.id)}">تعديل</button><button class="btn warn sm" data-mdel="${esc(m.id)}">حذف</button></div></div>`).join('')
+      : '<p class="hint" style="margin:0">لسا ما في مواد. ضيف أول محاضرة تحت.</p>';
+    $('#mlist').querySelectorAll('[data-medit]').forEach(b => b.onclick = () => {
+      const m = mats.find(x => x.id === b.dataset.medit); $('#mid').value = m.id; $('#mt').value = m.title; $('#mb').value = m.body;
+      $('#mbtn').textContent = 'حفظ التعديل'; $('#mcancel').hidden = false; $('#mt').scrollIntoView({ behavior:'smooth', block:'center' });
+    });
+    $('#mlist').querySelectorAll('[data-mdel]').forEach(b => b.onclick = async () => {
+      if (!await confirmBox('حذف هذه المادة؟ المساعد ما رح يجاوب منها بعد هيك.', 'حذف')) return;
+      try { await api.delMaterial(b.dataset.mdel); drawMats(); } catch(e) { toast(errMsg(e)); }
+    });
+  };
+  const resetMf = () => { $('#mf').reset(); $('#mid').value = ''; $('#mbtn').textContent = 'إضافة المادة'; $('#mcancel').hidden = true; };
+  $('#mcancel').onclick = resetMf;
+  $('#mfileB').onclick = () => $('#mfile').click();
+  $('#mfile').onchange = async e => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    try {
+      let text;
+      if (/\.pdf$/i.test(f.name) || f.type === 'application/pdf') {
+        toast('جاري استخراج النص من الـ PDF…');
+        const lib = await loadPdfLib(), doc = await lib.getDocument({ data: await f.arrayBuffer() }).promise, parts = [];
+        for (let i = 1; i <= Math.min(doc.numPages, 80); i++) { const c = await (await doc.getPage(i)).getTextContent(); parts.push(c.items.map(x => x.str).join(' ')); }
+        text = parts.join('\n\n');
+      } else text = await f.text();
+      text = text.trim();
+      if (!text) return toast('ما لقيت نص بالملف (ممكن يكون صور بس).');
+      $('#mb').value = text.slice(0, 60000); if (!$('#mt').value) $('#mt').value = f.name.replace(/\.[^.]+$/, '');
+      toast('تم تعبئة المحتوى من الملف، راجعه واحفظ.');
+    } catch(er) { toast('تعذّر قراءة الملف.'); }
+  };
+  $('#mf').onsubmit = async e => {
+    e.preventDefault(); const btn = $('#mbtn'); btn.disabled = true;
+    try { await api.saveMaterial({ id:$('#mid').value || null, title:$('#mt').value.trim(), body:$('#mb').value.trim() }); toast('تم حفظ المادة'); resetMf(); drawMats(); }
+    catch(er) { toast(errMsg(er)); }
+    btn.disabled = false;
+  };
+  drawMats();
   const draw = async () => {
     let list; try { list = await api.requests(); } catch(e) { $('#rlist').innerHTML = `<div class="notice err">${esc(errMsg(e))}</div>`; return; }
     $('#rlist').innerHTML = list.length ? `<table class="table"><thead><tr><th>الاسم</th><th>اسم المستخدم والإيميل</th><th></th></tr></thead><tbody>${list.map(r => `
@@ -1880,14 +2086,46 @@ async function viewNotifs(){
   $('#app').innerHTML = `<div class="panel" style="max-width:640px;margin:0 auto"><h2>الإشعارات</h2>
     ${list.length ? `<div class="nlist">${list.map(n => {
       const a = prof(n.actor_id), w = S.works.find(x => x.id === n.work_id);
-      const txt = n.kind === 'like' ? 'أعجب بعملك' : 'علّق على عملك';
-      return `<a class="nitem ${n.read_at ? '' : 'unread'}" href="${w ? '#w-' + w.id : '#notifs'}">${avatar(a, 42)}
-        <span class="ntxt"><b>${esc(a?.full_name || 'عضو')}</b> ${txt}${w ? ` في تمرين ${esc(w.exercise_no)}` : ''}<small>${fmtDate(n.created_at)}</small></span>
-        <span class="nic ${n.kind}">${n.kind === 'like' ? ICON.up : ICON.cm}</span></a>`; }).join('')}</div>`
+      const grade = n.kind === 'grade', txt = n.kind === 'like' ? 'أعجب بعملك' : grade ? 'قيّم تمرينك' : 'علّق على عملك';
+      const who = a ? a : { id:'coach', full_name:'المدرب' };
+      return `<a class="nitem ${n.read_at ? '' : 'unread'}" href="${w ? '#w-' + w.id : '#notifs'}">${avatar(who, 42)}
+        <span class="ntxt"><b>${esc(who.full_name || 'عضو')}</b> ${txt}${w ? ` ${grade ? 'رقم' : 'في تمرين'} ${esc(w.exercise_no)}` : ''}${grade && S.grades[n.work_id] ? ` · ${S.grades[n.work_id].score}/10` : ''}<small>${fmtDate(n.created_at)}</small></span>
+        <span class="nic ${n.kind}">${n.kind === 'like' ? ICON.up : grade ? '★' : ICON.cm}</span></a>`; }).join('')}</div>`
       : `<div class="empty">لا توجد إشعارات بعد. لما حدا يعجب بعملك أو يعلّق عليه رح يظهر هون.</div>`}</div>`;
   if (list.some(n => !n.read_at)) {
     try { await api.markNotifsRead(); const now = new Date().toISOString(); S.notifs.forEach(n => { if (!n.read_at) n.read_at = now; }); renderNav(); } catch(e) {}
   }
+}
+let chatLog = [];   // the assistant conversation, kept while the page is open
+async function viewAssistant(){
+  if (!me()) return viewLogin();
+  if (!(myProfile() || api.isAdmin()) || !aiOn()) return notFound('مساعد الدورة متاح للأعضاء فقط.');
+  $('#app').innerHTML = `
+    <div class="panel" style="max-width:760px;margin:0 auto">
+      <div class="row" style="justify-content:space-between"><h2 style="margin:0">مساعد الدورة</h2>${chatLog.length ? `<button class="btn ghost sm" id="chatNew">محادثة جديدة</button>` : ''}</div>
+      <p class="hint" style="margin:6px 0 12px">اسأل عن أي إشي بالدورة، وClaude بيجاوبك من ملخصات المحاضرات اللي رفعها المدرب. إذا الجواب مش موجود فيها بيقلك.</p>
+      <div class="chat" id="chat"></div>
+      <form id="chatF" class="chatin"><textarea class="in" id="chatQ" maxlength="2000" placeholder="اكتب سؤالك… مثلًا: كيف بكتب برومبت منيح؟" required></textarea><button class="btn" id="chatB">إرسال</button></form>
+      <details style="margin-top:14px"><summary class="hint" style="cursor:pointer">مواد الدورة المتاحة</summary><div id="mats" class="hint">جاري التحميل…</div></details>
+    </div>`;
+  const draw = (waiting=false) => {
+    $('#chat').innerHTML = (chatLog.length ? '' : `<div class="msg bot">أهلًا! أنا مساعد دورة صُنّاع AI 2. شو سؤالك؟</div>`)
+      + chatLog.map(m => `<div class="msg ${m.role === 'user' ? 'user' : 'bot'}">${m.role === 'user' ? esc(m.content).replace(/\n/g, '<br>') : `<div class="md">${mdLite(m.content)}</div>`}</div>`).join('')
+      + (waiting ? `<div class="msg bot wait">Claude بيكتب…</div>` : '');
+    $('#chat').scrollTop = $('#chat').scrollHeight;
+  };
+  draw();
+  api.materials().then(ms => { $('#mats').innerHTML = ms.length ? `<ul>${ms.map(m => `<li>${esc(m.title)}</li>`).join('')}</ul>` : 'لسا ما في مواد.'; }).catch(e => { $('#mats').textContent = errMsg(e); });
+  const nb = $('#chatNew'); if (nb) nb.onclick = () => { chatLog = []; viewAssistant(); };
+  $('#chatQ').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#chatF').requestSubmit(); } };
+  $('#chatF').onsubmit = async e => {
+    e.preventDefault();
+    const q = $('#chatQ').value.trim(); if (!q) return;
+    chatLog.push({ role:'user', content:q }); $('#chatQ').value = ''; $('#chatB').disabled = true; draw(true);
+    try { const answer = await api.ask(chatLog.slice(-20)); chatLog.push({ role:'assistant', content:answer }); }
+    catch(er) { chatLog.pop(); $('#chatQ').value = q; toast(errMsg(er)); }
+    $('#chatB').disabled = false; draw();
+  };
 }
 function notFound(msg){ $('#app').innerHTML = `<div class="empty">${esc(msg)}<br><br><a class="btn ghost" href="#home">الرئيسية</a></div>`; }
 
@@ -1909,6 +2147,7 @@ function _route(){
   if (h === 'me') return viewMe();
   if (h === 'admin') return viewAdmin();
   if (h === 'notifs') return viewNotifs();
+  if (h === 'assistant') return viewAssistant();
   if (h.startsWith('ex-')) return viewExercise(parseInt(h.slice(3), 10));
   if (h === 'add') { if (!myProfile()) return viewMe(); return workForm(null); }
   if (h.startsWith('edit-')) {
