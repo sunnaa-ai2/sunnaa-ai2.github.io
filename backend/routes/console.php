@@ -3,7 +3,7 @@
 use App\Models\LoginToken;
 use App\Models\Profile;
 use App\Models\User;
-use App\Support\LoginLinks;
+use App\Support\PasswordResets;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schedule;
@@ -12,14 +12,22 @@ use Illuminate\Support\Facades\Schedule;
 Schedule::call(fn () => LoginToken::where('expires_at', '<', now()->subDay())->delete())->daily();
 
 /*
- * Prints the permanent login link of an e-mail, without sending an e-mail:
- *   php artisan sunnaa:login-link you@gmail.com
- * --new replaces the link (the old one stops working), e.g. if it was shared by mistake.
+ * Prints a password-reset link without sending an e-mail (if mail fails, or for a first admin login):
+ *   php artisan sunnaa:reset-link you@gmail.com
  */
-Artisan::command('sunnaa:login-link {email} {--new : Replace the link; the old one stops working}', function (string $email) {
-    $this->info(LoginLinks::url(LoginLinks::token($email, (bool) $this->option('new'))));
-    $this->line('Permanent link: it signs in to this account every time. Do not share it.');
-})->purpose('Print the permanent login link of an e-mail (no mail is sent)');
+Artisan::command('sunnaa:reset-link {email}', function (string $email) {
+    $email = strtolower(trim($email));
+    $user = User::where('email', $email)->first();
+    if ($user ? $user->status !== 'approved' : ! in_array($email, config('spark.admins'), true)) {
+        $this->error('No approved account (or admin e-mail) with this address.');
+
+        return 1;
+    }
+    $this->info(PasswordResets::url(PasswordResets::create($email)));
+    $this->line('Works once, for '.config('spark.reset_ttl').' minutes.');
+
+    return 0;
+})->purpose('Print a one-time password-reset link (no mail is sent)');
 
 /*
  * One-time import of the old Supabase data (users + profiles), from a JSON file or stdin:

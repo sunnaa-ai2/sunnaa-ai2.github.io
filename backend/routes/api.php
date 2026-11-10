@@ -4,7 +4,6 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\FileController;
-use App\Http\Controllers\JoinController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicController;
@@ -15,8 +14,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', fn () => ['name' => 'sunnaa-ai2-api', 'ok' => true]);
 
 /* ---------- public (visitors) ---------- */
-Route::post('auth/link', [AuthController::class, 'link'])->middleware('throttle:6,1');
-Route::post('auth/verify', [AuthController::class, 'verify'])->middleware('throttle:20,1');
+Route::post('auth/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
+Route::post('auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+Route::post('auth/forgot', [AuthController::class, 'forgot'])->middleware('throttle:5,1');
+Route::post('auth/reset', [AuthController::class, 'reset'])->middleware('throttle:10,1');
 
 Route::get('profiles', [PublicController::class, 'profiles']);
 Route::get('works', [PublicController::class, 'works']);
@@ -33,7 +34,8 @@ Route::get('files/avatars/{profile}', [FileController::class, 'avatar'])->name('
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('me', [AuthController::class, 'me']);
     Route::post('auth/logout', [AuthController::class, 'logout']);
-    Route::post('join', JoinController::class);
+    Route::put('me/password', [AuthController::class, 'changePassword'])->middleware('throttle:10,1');
+    Route::put('me/username', [AuthController::class, 'changeUsername']);
     Route::delete('me', [ProfileController::class, 'destroy']);
 
     Route::get('notifications', [NotificationController::class, 'index']);
@@ -44,7 +46,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('works/{work}', [WorkController::class, 'destroy']);
     Route::delete('comments/{comment}', [CommentController::class, 'destroy']);
 
-    /* members only (joined with an invite) */
+    /* members only (approved, with a public page) */
     Route::middleware('member')->group(function () {
         Route::post('me/profile', [ProfileController::class, 'update']);
         Route::post('works', [WorkController::class, 'store']);
@@ -54,9 +56,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     /* admins only */
     Route::middleware('admin')->prefix('admin')->group(function () {
-        Route::get('invites', [AdminController::class, 'invites']);
-        Route::post('invites', [AdminController::class, 'createInvite']);
-        Route::delete('invites/{invite}', [AdminController::class, 'deleteInvite']);
+        Route::get('requests', [AdminController::class, 'requests']);
+        Route::post('requests/{user}/approve', [AdminController::class, 'approve']);
+        Route::post('requests/{user}/reject', [AdminController::class, 'reject']);
         Route::delete('members/{profile}', [AdminController::class, 'deleteMember']);
         Route::put('exercises/{no}', [AdminController::class, 'saveExercise'])->whereNumber('no');
     });

@@ -5,9 +5,9 @@ namespace App\Support;
 use App\Models\AppNotification;
 use App\Models\Comment;
 use App\Models\Exercise;
-use App\Models\Invite;
 use App\Models\Profile;
 use App\Models\Reaction;
+use App\Models\User;
 use App\Models\Work;
 
 /**
@@ -70,12 +70,12 @@ class Present
         return ['no' => $e->no, 'title' => $e->title, 'description' => $e->description, 'updated_at' => $e->updated_at?->toIso8601ZuluString('millisecond')];
     }
 
-    public static function invite(Invite $i): array
+    /** A pending registration, for the admin's list. */
+    public static function request(User $u): array
     {
         return [
-            'token' => $i->token, 'email' => $i->email, 'created_by' => $i->created_by,
-            'created_at' => $i->created_at?->toIso8601ZuluString('millisecond'),
-            'used_at' => $i->used_at?->toIso8601ZuluString('millisecond'), 'used_by' => $i->used_by,
+            'id' => $u->id, 'username' => $u->username, 'full_name' => $u->requested_name, 'email' => $u->email,
+            'created_at' => $u->created_at?->toIso8601ZuluString('millisecond'),
         ];
     }
 

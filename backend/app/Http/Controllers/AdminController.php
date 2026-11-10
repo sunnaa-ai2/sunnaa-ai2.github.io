@@ -3,37 +3,48 @@
 namespace App\Http\Controllers;
 
 use App\Models\Exercise;
-use App\Models\Invite;
 use App\Models\Profile;
+use App\Models\User;
 use App\Support\Files;
-use App\Support\LoginLinks;
+use App\Support\Notices;
+use App\Support\PasswordResets;
 use App\Support\Present;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class AdminController extends Controller
 {
-    public function invites()
+    /** People who registered and wait for approval, oldest first. */
+    public function requests()
     {
-        return response()->json(Invite::latest()->get()->map(fn ($i) => Present::invite($i)));
+        return response()->json(User::where('status', 'pending')->orderBy('created_at')->get()->map(fn ($u) => Present::request($u)));
     }
 
-    public function createInvite(Request $request)
+    /** Approves a registration: the account becomes active and the trainee gets a public page. */
+    public function approve(User $user)
     {
-        $data = $request->validate(['email' => ['required', 'email', 'max:190']]);
-        $invite = Invite::create(['email' => strtolower(trim($data['email'])), 'created_by' => $request->user()->id]);
+        abort_unless($user->status === 'pending', 422, 'REQUEST_NOT_PENDING');
+        $profile = DB::transaction(function () use ($user) {
+            $user->forceFill(['status' => 'approved'])->save();
 
-        return response()->json(Present::invite($invite->fresh()), 201);
+            return Profile::firstOrCreate(['user_id' => $user->id], ['full_name' => $user->requested_name ?: $user->username]);
+        });
+        Notices::approved($user);
+
+        return response()->json(Present::profile($profile));
     }
 
-    public function deleteInvite(Invite $invite)
+    /** Rejects a registration: the request is removed, so the person may apply again. */
+    public function reject(User $user)
     {
-        $invite->delete();
+        abort_unless($user->status === 'pending', 422, 'REQUEST_NOT_PENDING');
+        Notices::rejected($user);
+        $user->delete();
 
         return response()->json(['ok' => true]);
     }
 
-    /** Removes a member completely; they can only come back with a new invite. */
+    /** Removes a member completely; to come back they register again and wait for approval. */
     public function deleteMember(Request $request, Profile $profile)
     {
         abort_if($profile->user_id === $request->user()->id, 422, 'CANNOT_DELETE_SELF');
@@ -41,7 +52,7 @@ class AdminController extends Controller
         DB::transaction(function () use ($profile) {
             $user = $profile->user;
             $user->tokens()->delete();
-            LoginLinks::forget($user->email);
+            PasswordResets::forget($user->email);
             $user->delete();
         });
 

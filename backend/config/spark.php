@@ -1,7 +1,7 @@
 <?php
 
 return [
-    // Comma-separated e-mails that act as admins (send invites, edit exercises, remove members).
+    // Comma-separated e-mails that act as admins (approve registrations, edit exercises, remove members).
     'admins' => array_values(array_filter(array_map(
         fn ($e) => strtolower(trim($e)),
         explode(',', (string) env('ADMIN_EMAILS', ''))
@@ -10,8 +10,8 @@ return [
     // Where the static site lives; login links in e-mails point here.
     'frontend_url' => env('FRONTEND_URL', 'https://sunnaa-ai2.github.io'),
 
-    // Minutes a login link stays valid.
-    'login_ttl' => (int) env('LOGIN_LINK_TTL', 30),
+    // Minutes a password-reset link stays valid.
+    'reset_ttl' => (int) env('RESET_LINK_TTL', 60),
 
     // Days an API token stays valid.
     'token_days' => (int) env('API_TOKEN_DAYS', 30),
