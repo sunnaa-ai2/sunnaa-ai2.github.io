@@ -13,8 +13,8 @@ API_URL: "https://sunnaa.alwaysdata.net"
 
 | الجزء | التفاصيل |
 |---|---|
-| الدخول | رابط دائم لكل إيميل يُرسل على البريد (نفس الرابط كل مرة، يعمل من أي جهاز) ← توكن API صالح 30 يومًا. `sunnaa:login-link EMAIL --new` يستبدله إذا انتشر |
-| العضوية | الانضمام فقط برابط دعوة مربوط بإيميل محدد ويُستخدم مرة واحدة. الأدمن ينضم بدون دعوة |
+| الدخول | اسم مستخدم أو إيميل + كلمة مرور ← توكن API صالح 30 يومًا. نسيت كلمة المرور: رابط على الإيميل يعمل مرة خلال 60 دقيقة |
+| العضوية | التسجيل ينشئ حسابًا بانتظار الموافقة ويُبلَّغ الأدمن بالإيميل؛ القبول ينشئ صفحة المتدرب ويرسل له إيميل. حساب الأدمن يُفتح أول مرة من «نسيت كلمة المرور» بإيميله |
 | الأدمن | الإيميلات في `ADMIN_EMAILS`: إنشاء دعوات، حذف أعضاء، كتابة وصف التمارين، حذف أي عمل أو تعليق |
 | الأعمال | رابط، صورة، PDF، أو أي ملف حتى 50MB. الصور وملفات PDF تفتح في المتصفح، وباقي الملفات تُنزَّل فقط (حماية من صفحات HTML الضارة) |
 | التفاعل | إعجاب/عدم إعجاب. عدم الإعجاب يراه صاحبه وصاحب العمل والأدمن فقط |
@@ -28,12 +28,13 @@ API_URL: "https://sunnaa.alwaysdata.net"
 
 | الطريقة | المسار | من |
 |---|---|---|
-| POST | `/auth/link` `{email, invite?}` | الكل |
-| POST | `/auth/verify` `{token}` | الكل |
+| POST | `/auth/register` `{full_name, username, email, password}` · `/auth/login` `{login, password}` | الكل |
+| POST | `/auth/forgot` `{email}` · `/auth/reset` `{token, password}` | الكل |
 | GET | `/profiles` · `/works` · `/exercises` · `/reactions` · `/comments/rows` · `/works/{id}/comments` | الكل |
 | GET | `/files/work-files/{fileId}` · `/files/works/{id}` (أول ملف) · `/files/avatars/{userId}` | الكل |
 | GET | `/me` · `/notifications` | مسجّل |
-| POST | `/auth/logout` · `/join` `{token?, name}` · `/notifications/read` | مسجّل |
+| POST | `/auth/logout` · `/notifications/read` | مسجّل |
+| PUT | `/me/password` `{current_password, password}` · `/me/username` `{username}` | مسجّل |
 | DELETE | `/me` | مسجّل |
 | POST | `/me/profile` · `/works` | عضو |
 | PUT | `/works/{id}/reaction` `{value: 1 \| -1 \| 0}` | عضو |
@@ -42,7 +43,7 @@ API_URL: "https://sunnaa.alwaysdata.net"
 
 العمل الواحد = تسليم تمرين: إما رابط (`kind=link`, `url`) أو من 1 إلى 8 ملفات بأي صيغة (`kind=files`, `files[]`)، بحد 50MB للملف وللتسليم كله. عند التعديل: `remove[]` لحذف ملفات بأرقامها و`files[]` لإضافة ملفات. كل عمل يرجع بقائمة `files` مرتبة.
 | DELETE | `/comments/{id}` | الكاتب أو أدمن |
-| GET · POST · DELETE | `/admin/invites` · `/admin/invites/{token}` | أدمن |
+| GET · POST | `/admin/requests` · `/admin/requests/{id}/approve` · `/admin/requests/{id}/reject` | أدمن |
 | DELETE | `/admin/members/{userId}` | أدمن |
 | PUT | `/admin/exercises/{no}` `{title, description}` | أدمن |
 
@@ -92,14 +93,14 @@ GitHub Pages لا يشغّل PHP، لذلك يحتاج الباك اند سير�
 | `DB_*` | بيانات MySQL |
 | `FRONTEND_URL` · `CORS_ORIGINS` | `https://sunnaa-ai2.github.io` |
 | `ADMIN_EMAILS` | إيميلات الأدمن مفصولة بفاصلة |
-| `MAIL_*` | بريد alwaysdata نفسه لإرسال روابط الدخول (بدون خدمة خارجية وبدون كلمة سر). `MAIL_FROM_ADDRESS` = العنوان المنشأ من Emails ← Addresses. للطوارئ: `php artisan sunnaa:login-link EMAIL` يطبع رابط دخول بدون بريد |
+| `MAIL_*` | بريد alwaysdata نفسه لإرسال رسائل التسجيل والقبول واسترجاع كلمة المرور (بدون خدمة خارجية وبدون كلمة سر). `MAIL_FROM_ADDRESS` = العنوان المنشأ من Emails ← Addresses. للطوارئ: `php artisan sunnaa:reset-link EMAIL` يطبع رابط تعيين كلمة مرور بدون بريد |
 | `FILES_DISK` | `local` أو `s3` |
 
 ### بعد النشر
 
 1. افتح `https://رابط-السيرفر/api` — يجب أن ترى `{"name":"sunnaa-ai2-api","ok":true}`.
 2. في `index.html` ضع رابط السيرفر في `API_URL`.
-3. ادخل بإيميل الأدمن وأنشئ ملفك من "أكمل التسجيل"، أو اطبع رابط دخول من السيرفر: `php artisan sunnaa:login-link EMAIL`.
+3. افتح حساب الأدمن من «نسيت كلمة المرور» بإيميل الأدمن (أو اطبع الرابط من السيرفر: `php artisan sunnaa:reset-link EMAIL`).
 
 ### نقل بيانات من مشروع Supabase قديم
 `php artisan sunnaa:import-supabase` يستورد المستخدمين والملفات الشخصية من JSON (ملف أو stdin). يطابق المستخدمين بالإيميل، ولا يكرر شيئًا إذا شُغّل مرتين.

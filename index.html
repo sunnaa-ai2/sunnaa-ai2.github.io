@@ -721,6 +721,10 @@ footer.ft .wrap{display:block!important}
 .fcap{display:flex;justify-content:space-between;gap:10px;padding:8px 14px;font-size:13px;color:var(--muted);border-top:1px solid var(--line)}
 .fcap span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bigtile .fsz{font-family:var(--f-mono,monospace);font-size:13px;opacity:.85}
+.nbadge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--ember,#ff2e3b);color:#fff;font:600 11px var(--f-mono,monospace);vertical-align:middle}
+.seg a{display:inline-block;padding:7px 14px;border-radius:9px;font-weight:700;color:var(--muted);text-decoration:none}
+.seg a.on{background:var(--ember,#ff2e3b);color:#fff}
+.pwt{flex:none}
 </style>
 </head>
 <body>
@@ -833,7 +837,7 @@ const toDataUrl = blob => new Promise((res,rej)=>{ const r=new FileReader(); r.o
    Backend 1: وضع المعاينة (بيانات تجريبية في المتصفح)
    ========================================================= */
 function MockApi(){
-  const KEY = 'spark_ai2_demo_v3';
+  const KEY = 'spark_ai2_demo_v4';
   const ADMINS = ['abed@example.com','ahmed@example.com'];
   let db, listener = null;
   const art = (n, c1, c2) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs><rect width="800" height="600" fill="url(#g)"/><circle cx="640" cy="140" r="90" fill="#fff" opacity=".18"/><circle cx="160" cy="470" r="130" fill="#fff" opacity=".12"/><rect x="230" y="220" width="340" height="160" rx="24" fill="#fff" opacity=".9"/><text x="400" y="318" font-family="Tahoma,Arial" font-size="54" font-weight="700" text-anchor="middle" fill="${c1}">تصميم ${n}</text></svg>`);
@@ -841,8 +845,10 @@ function MockApi(){
     const day = 864e5, now = Date.now();
     const U = { abed:'u-abed', ahmed:'u-ahmed', sara:'u-sara', mo:'u-mo', layan:'u-layan' };
     const users = [
-      {id:U.abed,email:ADMINS[0]},{id:U.ahmed,email:ADMINS[1]},
-      {id:U.sara,email:'sara@example.com'},{id:U.mo,email:'mohammed@example.com'},{id:U.layan,email:'layan@example.com'}
+      {id:U.abed,email:ADMINS[0],username:'abed',password:'demo1234',status:'approved'},{id:U.ahmed,email:ADMINS[1],username:'ahmed',password:'demo1234',status:'approved'},
+      {id:U.sara,email:'sara@example.com',username:'sara',password:'demo1234',status:'approved'},{id:U.mo,email:'mohammed@example.com',username:'mohammed',password:'demo1234',status:'approved'},
+      {id:U.layan,email:'layan@example.com',username:'layan',password:'demo1234',status:'approved'},
+      {id:'u-yousef',email:'yousef@example.com',username:'yousef',password:'demo1234',status:'pending',requested_name:'يوسف (طلب تجريبي)',created_at:new Date(now-2*36e5).toISOString()},
     ];
     const profiles = [
       {id:U.abed,full_name:'عبد العزيز أبو علبة',bio:'طالب هندسة حاسوب في الجامعة الإسلامية، مهتم بتطوير الويب والذكاء الاصطناعي.',avatar_url:null,created_at:new Date(now-20*day).toISOString()},
@@ -879,11 +885,7 @@ function MockApi(){
       {id:rid(),user_id:U.abed,actor_id:U.sara,kind:'like',work_id:works[2].id,created_at:new Date(now-3*day).toISOString(),read_at:null},
       {id:rid(),user_id:U.abed,actor_id:U.mo,kind:'like',work_id:works[0].id,created_at:new Date(now-11*day).toISOString(),read_at:new Date(now-10*day).toISOString()},
     ];
-    const invites = [
-      {token:rid(),email:'sara@example.com',created_by:U.abed,created_at:new Date(now-19*day).toISOString(),used_at:new Date(now-18*day).toISOString(),used_by:U.sara},
-      {token:rid(),email:'new.trainee@example.com',created_by:U.ahmed,created_at:new Date(now-1*day).toISOString(),used_at:null,used_by:null},
-    ];
-    return {users,profiles,works,reactions,comments,invites,exercises,notifs,session:null};
+    return {users,profiles,works,reactions,comments,exercises,notifs,session:null};
   }
   try { db = JSON.parse(localStorage.getItem(KEY)); } catch(e) { db = null; }
   if (!db || !db.users) db = seed();
@@ -893,12 +895,7 @@ function MockApi(){
   const isMember = () => !!me() && db.profiles.some(p => p.id === db.session);
   const need = c => { if (!c) throw new Error('FORBIDDEN'); };
   const fire = () => listener && setTimeout(listener, 0);
-  const signIn = email => {
-    email = email.trim().toLowerCase();
-    let u = db.users.find(x => x.email === email);
-    if (!u) { u = {id:rid(), email}; db.users.push(u); }
-    db.session = u.id; save(); fire();
-  };
+  const findLogin = l => { l = l.trim().toLowerCase(); return db.users.find(x => (l.includes('@') ? x.email : x.username) === l); };
   async function fileToUrl(file, kind){
     if (kind === 'image') return toDataUrl(await compressImage(file, 1000, .8));
     if (file.size > 3*1024*1024) throw new Error('في وضع المعاينة الحد الأقصى للملف هو 3MB');
@@ -918,9 +915,45 @@ function MockApi(){
     reset(){ db = seed(); save(); fire(); },
     async init(){},
     onChange(cb){ listener = cb; },
-    user: () => { const u = me(); return u ? {id:u.id, email:u.email} : null; },
+    user: () => { const u = me(); return u ? {id:u.id, email:u.email, username:u.username || null} : null; },
     isAdmin,
-    async sendLink(email){ signIn(email); return 'demo'; },
+    pendingRequests: () => isAdmin() ? db.users.filter(u => u.status === 'pending').length : 0,
+    async login(login, password){
+      const u = findLogin(login);
+      if (!u || u.password !== password) throw new Error('LOGIN_FAILED');
+      if (u.status === 'pending') throw new Error('PENDING_APPROVAL');
+      db.session = u.id; save(); fire();
+    },
+    async register({full_name, username, email, password}){
+      username = username.trim().toLowerCase(); email = email.trim().toLowerCase();
+      if (full_name.trim().length < 2) throw new Error('NAME_REQUIRED');
+      if (!/^[a-z0-9_.]{3,30}$/.test(username)) throw new Error('USERNAME_INVALID');
+      if (password.length < 8) throw new Error('PASSWORD_SHORT');
+      if (ADMINS.includes(email)) throw new Error('EMAIL_RESERVED');
+      if (db.users.some(u => u.username === username)) throw new Error('USERNAME_TAKEN');
+      if (db.users.some(u => u.email === email)) throw new Error('EMAIL_TAKEN');
+      db.users.push({id:rid(), email, username, password, status:'pending', requested_name:full_name.trim(), created_at:new Date().toISOString()}); save();
+    },
+    async forgot(){},
+    async resetPassword(){ throw new Error('RESET_LINK_INVALID'); },
+    async changePassword(current, password){
+      const u = me(); need(u);
+      if (u.password && u.password !== current) throw new Error('WRONG_PASSWORD');
+      if (password.length < 8) throw new Error('PASSWORD_SHORT');
+      u.password = password; save();
+    },
+    async changeUsername(username){
+      const u = me(); need(u); username = username.trim().toLowerCase();
+      if (!/^[a-z0-9_.]{3,30}$/.test(username)) throw new Error('USERNAME_INVALID');
+      if (db.users.some(x => x.username === username && x.id !== u.id)) throw new Error('USERNAME_TAKEN');
+      u.username = username; save(); fire();
+    },
+    async requests(){ need(isAdmin()); return db.users.filter(u => u.status === 'pending').map(u => ({id:u.id, username:u.username, full_name:u.requested_name, email:u.email, created_at:u.created_at})); },
+    async approve(id){
+      need(isAdmin()); const u = db.users.find(x => x.id === id && x.status === 'pending'); if (!u) throw new Error('REQUEST_NOT_PENDING');
+      u.status = 'approved'; db.profiles.push({id:u.id, full_name:u.requested_name, bio:'', avatar_url:null, created_at:new Date().toISOString()}); save();
+    },
+    async reject(id){ need(isAdmin()); db.users = db.users.filter(x => !(x.id === id && x.status === 'pending')); save(); },
     async logout(){ db.session = null; save(); fire(); },
     async profiles(){ return [...db.profiles].sort((a,b)=>a.created_at.localeCompare(b.created_at)); },
     async works(){ return [...db.works].sort((a,b)=>a.created_at.localeCompare(b.created_at)); },
@@ -985,22 +1018,6 @@ function MockApi(){
       w.updated_at = new Date().toISOString(); save();
     },
     async delWork(w){ need(w.user_id===db.session || isAdmin()); db.works = db.works.filter(x=>x.id!==w.id); db.reactions = db.reactions.filter(r=>r.work_id!==w.id); db.comments = db.comments.filter(c=>c.work_id!==w.id); save(); },
-    async join(token, name){
-      const u = me(); if (!u) throw new Error('NOT_LOGGED_IN');
-      if (isMember()) return;
-      if (!token) { if (!isAdmin()) throw new Error('INVITE_REQUIRED'); }
-      else {
-        const inv = db.invites.find(i => i.token === token);
-        if (!inv) throw new Error('INVITE_INVALID');
-        if (inv.used_at) throw new Error('INVITE_USED');
-        if (inv.email.toLowerCase() !== u.email) throw new Error('INVITE_EMAIL_MISMATCH');
-        inv.used_at = new Date().toISOString(); inv.used_by = u.id;
-      }
-      db.profiles.push({id:u.id, full_name:name, bio:'', avatar_url:null, created_at:new Date().toISOString()}); save();
-    },
-    async invites(){ need(isAdmin()); return [...db.invites].sort((a,b)=>b.created_at.localeCompare(a.created_at)); },
-    async createInvite(email){ need(isAdmin()); const inv = {token:rid(),email:email.toLowerCase(),created_by:db.session,created_at:new Date().toISOString(),used_at:null,used_by:null}; db.invites.push(inv); save(); return inv; },
-    async delInvite(token){ need(isAdmin()); db.invites = db.invites.filter(i=>i.token!==token); save(); },
     async delMember(id){
       need(isAdmin());
       const wids = db.works.filter(w=>w.user_id===id).map(w=>w.id);
@@ -1026,7 +1043,7 @@ function MockApi(){
 function LaravelApi(){
   const base = CONFIG.API_URL.replace(/\/+$/, '') + '/api';
   const TK = 'spark_api_token';
-  let token = null, user = null, admin = false, listener = null;
+  let token = null, user = null, admin = false, pending = 0, listener = null;
   try { token = localStorage.getItem(TK); } catch(e) {}
   const saveToken = t => { token = t; try { t ? localStorage.setItem(TK, t) : localStorage.removeItem(TK); } catch(e) {} };
   async function req(method, path, body){
@@ -1068,7 +1085,7 @@ function LaravelApi(){
   async function loadMe(){
     user = null; admin = false;
     if (!token) return;
-    try { const d = await req('GET', '/me'); user = { id:d.user.id, email:(d.user.email || '').toLowerCase() }; admin = !!d.is_admin; }
+    try { const d = await req('GET', '/me'); user = { id:d.user.id, email:(d.user.email || '').toLowerCase(), username:d.user.username || null }; admin = !!d.is_admin; pending = d.pending_requests || 0; }
     catch(e) { if (!token) return; }
   }
   async function prep(kind, file){
@@ -1082,21 +1099,20 @@ function LaravelApi(){
   const fire = () => listener && setTimeout(listener, 0);
   return {
     demo: false,
-    async init(){
-      // رابط الدخول من الإيميل: ?login=TOKEN
-      const qs = new URLSearchParams(location.search), login = qs.get('login');
-      if (login) {
-        qs.delete('login');
-        history.replaceState(null, '', location.pathname + (qs.toString() ? '?' + qs : '') + location.hash);
-        try { const d = await req('POST', '/auth/verify', { token: login }); saveToken(d.token); }
-        catch(e) { setTimeout(() => toast('رابط الدخول غير صالح، اطلب رابطًا جديدًا من صفحة الدخول'), 300); }
-      }
-      await loadMe();
-    },
+    async init(){ await loadMe(); },
     onChange(cb){ listener = cb; },
     user: () => user,
     isAdmin: () => admin,
-    async sendLink(email, invite){ await req('POST', '/auth/link', { email: email.trim().toLowerCase(), invite: invite || null }); },
+    pendingRequests: () => admin ? pending : 0,
+    async login(login, password){ const d = await req('POST', '/auth/login', { login: login.trim(), password }); saveToken(d.token); await loadMe(); fire(); },
+    async register(f){ await req('POST', '/auth/register', { full_name:f.full_name.trim(), username:f.username.trim(), email:f.email.trim(), password:f.password }); },
+    async forgot(email){ await req('POST', '/auth/forgot', { email: email.trim() }); },
+    async resetPassword(tok, password){ const d = await req('POST', '/auth/reset', { token: tok, password }); saveToken(d.token); await loadMe(); fire(); },
+    async changePassword(current, password){ await req('PUT', '/me/password', { current_password: current || null, password }); },
+    async changeUsername(username){ await req('PUT', '/me/username', { username: username.trim() }); await loadMe(); fire(); },
+    requests: () => req('GET', '/admin/requests'),
+    async approve(id){ await req('POST', `/admin/requests/${id}/approve`); pending = Math.max(0, pending - 1); },
+    async reject(id){ await req('POST', `/admin/requests/${id}/reject`); pending = Math.max(0, pending - 1); },
     async logout(){ try { await req('POST', '/auth/logout'); } catch(e) {} saveToken(null); user = null; admin = false; fire(); },
     profiles: () => req('GET', '/profiles'),
     works: () => req('GET', '/works'),
@@ -1129,10 +1145,6 @@ function LaravelApi(){
       await send('POST', `/works/${id}`, fd, onProgress);
     },
     async delWork(w){ await req('DELETE', `/works/${w.id}`); },
-    async join(tok, name){ await req('POST', '/join', { token: tok || null, name }); },
-    invites: () => req('GET', '/admin/invites'),
-    createInvite: email => req('POST', '/admin/invites', { email: email.trim().toLowerCase() }),
-    async delInvite(tok){ await req('DELETE', `/admin/invites/${tok}`); },
     async delMember(id){ await req('DELETE', `/admin/members/${id}`); },
     async deleteMyAccount(){ await req('DELETE', '/me'); saveToken(null); user = null; admin = false; fire(); },
     async saveExercise(no, title, description){ await req('PUT', `/admin/exercises/${no}`, { title, description }); },
@@ -1144,24 +1156,31 @@ function LaravelApi(){
    ========================================================= */
 let api;
 const S = { profiles:[], works:[], reactions:[], ccount:{}, cby:{}, exercises:[], notifs:[], loaded:false };
-let pendingInvite = null;
+let resetToken = null;   // from ?reset=TOKEN in a password e-mail
 
 function errMsg(e){
   const m = String(e?.message || e || '');
   const map = {
-    INVITE_INVALID:'رابط الدعوة غير صالح أو تم حذفه.',
-    INVITE_USED:'رابط الدعوة هذا استُخدم من قبل. كل رابط يعمل لمرة واحدة فقط.',
-    INVITE_EMAIL_MISMATCH:'رابط الدعوة هذا مخصص لبريد إلكتروني آخر. سجّل الدخول بنفس البريد الذي وصلته الدعوة عليه.',
-    INVITE_REQUIRED:'لا يمكنك الانضمام بدون رابط دعوة.',
+    LOGIN_FAILED:'اسم المستخدم أو كلمة المرور غير صحيحة.',
+    PENDING_APPROVAL:'حسابك لسا بانتظار موافقة المسؤول. رح يوصلك إيميل لما يتم قبولك.',
+    USERNAME_INVALID:'اسم المستخدم من 3 إلى 30 حرف: أحرف إنجليزية صغيرة وأرقام و _ و . فقط.',
+    USERNAME_TAKEN:'اسم المستخدم هذا مأخوذ، اختر اسمًا آخر.',
+    EMAIL_TAKEN:'هذا الإيميل مسجّل من قبل، أو عنده طلب قيد المراجعة.',
+    EMAIL_INVALID:'اكتب إيميل صحيح.',
+    EMAIL_RESERVED:'هذا إيميل مسؤول. لفتح حسابك استخدم «نسيت كلمة المرور» بنفس الإيميل.',
+    PASSWORD_SHORT:'كلمة المرور لازم تكون 8 أحرف على الأقل.',
+    NAME_REQUIRED:'اكتب اسمك الكامل.',
+    RESET_LINK_INVALID:'رابط تعيين كلمة المرور منتهي أو مستخدم. اطلب رابطًا جديدًا.',
+    WRONG_PASSWORD:'كلمة المرور الحالية غير صحيحة.',
+    REQUEST_NOT_PENDING:'هذا الطلب تمت معالجته من قبل.',
     NOT_LOGGED_IN:'يجب تسجيل الدخول أولًا.',
     FORBIDDEN:'ليس لديك صلاحية لهذا الإجراء.',
-    LOGIN_LINK_INVALID:'رابط الدخول غير صالح، اطلب رابطًا جديدًا.',
     TOO_MANY_FILES:'الحد الأقصى 8 ملفات للتمرين الواحد.',
     FILES_REQUIRED:'أرفق ملفًا واحدًا على الأقل.',
     FILES_TOO_LARGE:'الحجم الكلي للملفات أكبر من 50MB.',
     FILE_TOO_LARGE:'أحد الملفات أكبر من 50MB.',
     UPLOAD_FAILED:'تعذّر رفع أحد الملفات، حاول مرة ثانية.',
-    NOT_MEMBER:'هذا الحساب ليس عضوًا بعد. افتح رابط الدعوة من بريدك أولًا.',
+    NOT_MEMBER:'هذا الحساب ليس عضوًا بعد.',
     CANNOT_DELETE_SELF:'لا يمكنك حذف حسابك من هنا، استخدم صفحة حسابي.',
     'Too Many Attempts':'محاولات كثيرة، حاول بعد دقيقة.',
     'rate limit':'تم إرسال عدد كبير من الرسائل، حاول بعد قليل.',
@@ -1281,16 +1300,15 @@ function renderNav(){
   const u = me(), p = myProfile(), adm = api.isAdmin();
   let h = `<a href="#home">الرئيسية</a>`;
   if (p) h += `<a href="#u-${p.id}">صفحتي</a><a href="#add" class="pill">+ إضافة تمرين</a>`;
-  else if (u && (adm || pendingInvite)) h += `<a href="#join" class="pill">أكمل التسجيل</a>`;
-  if (adm) h += `<a href="#admin">لوحة التحكم</a>`;
+  const nreq = api.pendingRequests ? api.pendingRequests() : 0, rb = nreq ? ` <span class="nbadge">${nreq > 9 ? '9+' : nreq}</span>` : '';
+  if (adm) h += `<a href="#admin">لوحة التحكم${rb}</a>`;
   if (u) h += `<a href="#me">حسابي</a><button id="logoutBtn">خروج</button>`;
-  else h += `<a href="#login" class="pill">دخول الأعضاء</a>`;
+  else h += `<a href="#register">حساب جديد</a><a href="#login" class="pill">دخول الأعضاء</a>`;
   $('#nav').innerHTML = h;
   const cur = location.hash || '#home', on = x => cur === x ? 'on' : '';
   let b = `<a href="#home" class="${on('#home')}">${ICON.home}الرئيسية</a>`;
   if (p) b += `<a href="#u-${p.id}" class="${on('#u-'+p.id)}">${ICON.user}صفحتي</a><a href="#add" class="plus" aria-label="إضافة تمرين">${ICON.plus}</a>`;
-  else if (u && (adm || pendingInvite)) b += `<a href="#join">${ICON.user}أكمل التسجيل</a>`;
-  if (adm) b += `<a href="#admin" class="${on('#admin')}">${ICON.shield}التحكم</a>`;
+  if (adm) b += `<a href="#admin" class="${on('#admin')}">${ICON.shield}التحكم${rb}</a>`;
   b += u ? `<a href="#me" class="${on('#me')}">${ICON.gear}حسابي</a>` : `<a href="#login" class="${on('#login')}">${ICON.login}دخول</a>`;
   $('#bnav').innerHTML = b;
   const bell = $('#bellBtn'), unread = S.notifs.filter(n => !n.read_at).length;
@@ -1426,7 +1444,7 @@ function viewProfile(id){
   $('#app').querySelectorAll('[data-delwork]').forEach(b => b.onclick = () => deleteWorkFlow(S.works.find(x => x.id === b.dataset.delwork)));
   const dm = $('#delM');
   if (dm) dm.onclick = async () => {
-    if (!await confirmBox(`إزالة ${p.full_name} من المنصة؟ سيتم حذف ملفه وكل أعماله وتعليقاته. لن يستطيع العودة إلا برابط دعوة جديد.`, 'إزالة')) return;
+    if (!await confirmBox(`إزالة ${p.full_name} من المنصة؟ سيتم حذف ملفه وكل أعماله وتعليقاته. ليرجع لازم يسجّل من جديد وينتظر الموافقة.`, 'إزالة')) return;
     try { await api.delMember(id); toast('تمت إزالة العضو'); location.hash = '#home'; await refresh(); } catch(e) { toast(errMsg(e)); }
   };
 }
@@ -1464,7 +1482,7 @@ async function viewWork(id){
     <div class="panel" style="margin-top:16px"><h2>التعليقات</h2>
       <div class="comments" id="cms"><div class="hint">جاري التحميل…</div></div>
       ${member ? `<form id="cf" style="margin-top:14px"><textarea class="in" id="cbody" maxlength="1000" placeholder="اكتب تعليقًا…" required></textarea><div class="row" style="margin-top:8px"><button class="btn">نشر التعليق</button></div></form>`
-        : `<div class="notice" style="margin-top:14px">${u ? 'التعليق والتفاعل متاح لأعضاء المنصة المدعوين فقط.' : 'التعليق والتفاعل متاح لأعضاء المنصة. <a href="#login">دخول الأعضاء</a>'}</div>`}
+        : `<div class="notice" style="margin-top:14px">${u ? 'التعليق والتفاعل متاح لأعضاء المنصة فقط.' : 'التعليق والتفاعل متاح لأعضاء المنصة. <a href="#login">دخول الأعضاء</a>'}</div>`}
     </div>`;
   const drawReact = () => {
     const c = counts(w.id), dis = !member;
@@ -1614,139 +1632,211 @@ function viewMe(){
   const u = me();
   if (!u) return viewLogin();
   const p = myProfile();
-  if (!p) return viewJoin();
   $('#app').innerHTML = `
-    <div class="panel"><h2>ملفي الشخصي</h2>
+    ${p ? `<div class="panel"><h2>ملفي الشخصي</h2>
       <form id="pf">
         <div class="row">${avatar(p,84)}<div><label for="av" style="margin-top:0">الصورة الشخصية</label><input id="av" type="file" accept="image/*"><div class="hint">مربعة يفضّل — يتم ضغطها تلقائيًا.</div></div></div>
         <label for="fn">الاسم</label><input class="in" id="fn" maxlength="60" required value="${esc(p.full_name)}">
         <label for="bio">نبذة قصيرة</label><textarea class="in" id="bio" maxlength="300" placeholder="عرّف عن نفسك في سطرين…">${esc(p.bio||'')}</textarea>
         <div class="row" style="margin-top:16px"><button class="btn" id="pbtn">حفظ</button><a class="btn ghost" href="#u-${p.id}">عرض صفحتي</a></div>
       </form>
+    </div>` : `<div class="notice" style="margin-bottom:14px">حسابك حساب مسؤول بدون صفحة عامة بين المتدربين.</div>`}
+    <div class="panel"><h2>بيانات الدخول</h2>
+      <form id="uf"><label for="un">اسم المستخدم</label>
+        <div class="row"><input class="in" id="un" dir="ltr" autocapitalize="none" spellcheck="false" maxlength="30" autocomplete="username" value="${esc(u.username || '')}" placeholder="${u.username ? '' : 'اختر اسم مستخدم'}" style="flex:1;min-width:180px"><button class="btn ghost" id="ubtn">حفظ الاسم</button></div>
+        <div class="hint">أحرف إنجليزية صغيرة وأرقام و _ و . — تقدر تدخل فيه أو بإيميلك.</div></form>
+      <form id="pwf" style="margin-top:14px">
+        <label for="pw0">كلمة المرور الحالية</label><input class="in" id="pw0" type="password" dir="ltr" autocomplete="current-password">
+        <label for="pw1">كلمة المرور الجديدة</label><input class="in" id="pw1" type="password" dir="ltr" minlength="8" autocomplete="new-password" required>
+        <label for="pw2">تأكيد كلمة المرور الجديدة</label><input class="in" id="pw2" type="password" dir="ltr" minlength="8" autocomplete="new-password" required>
+        <div class="row" style="margin-top:14px"><button class="btn" id="pwbtn">تغيير كلمة المرور</button></div>
+        <div class="hint">بعد التغيير بيطلع حسابك من باقي الأجهزة.</div></form>
     </div>
-    <div class="panel danger"><h2>حذف الحساب</h2>
-      <p style="margin:0 0 12px">رح ينحذف ملفك الشخصي وكل أعمالك وتعليقاتك وتفاعلاتك نهائيًا. ما بتقدر ترجع للمنصة إلا برابط دعوة جديد.</p>
+    ${p ? `<div class="panel danger"><h2>حذف الحساب</h2>
+      <p style="margin:0 0 12px">رح ينحذف ملفك الشخصي وكل أعمالك وتعليقاتك وتفاعلاتك نهائيًا. إذا بدك ترجع لازم تسجّل من جديد وتستنى موافقة المسؤول.</p>
       <button class="btn warn" id="delAcc">حذف حسابي نهائيًا</button>
-    </div>
-    <div class="hint">مسجّل الدخول بـ <span dir="ltr">${esc(u.email)}</span>${api.isAdmin() ? ' · <span class="chip admin">أدمن</span>' : ''}</div>`;
-  $('#delAcc').onclick = async () => {
+    </div>` : ''}
+    <div class="hint">مسجّل الدخول بـ <span dir="ltr">${esc(u.username || u.email)}</span>${api.isAdmin() ? ' · <span class="chip admin">أدمن</span>' : ''}</div>`;
+  const da = $('#delAcc');
+  if (da) da.onclick = async () => {
     if (!await confirmBox('متأكد إنك بدك تحذف حسابك؟ هاد الإجراء ما بينرجع عنه، وكل أعمالك وتعليقاتك رح تنحذف.', 'نعم، احذف حسابي')) return;
-    const b = $('#delAcc'); b.disabled = true; b.textContent = 'جاري الحذف…';
+    da.disabled = true; da.textContent = 'جاري الحذف…';
     try { await api.deleteMyAccount(); toast('تم حذف حسابك'); location.hash = '#home'; await refresh(); }
-    catch(er) { toast(errMsg(er)); b.disabled = false; b.textContent = 'حذف حسابي نهائيًا'; }
+    catch(er) { toast(errMsg(er)); da.disabled = false; da.textContent = 'حذف حسابي نهائيًا'; }
   };
-  $('#pf').onsubmit = async e => {
+  const pf = $('#pf');
+  if (pf) pf.onsubmit = async e => {
     e.preventDefault();
     const full_name = $('#fn').value.trim(); if (full_name.length < 2) return toast('اكتب اسمك');
     const btn = $('#pbtn'); btn.disabled = true;
     try { await api.saveProfile({ full_name, bio:$('#bio').value.trim() }, $('#av').files[0] || null); toast('تم الحفظ'); await refresh(); }
     catch(er) { toast(errMsg(er)); btn.disabled = false; }
   };
-}
-
-function viewLogin(){
-  if (me()) { location.hash = myProfile() ? '#me' : '#join'; return; }
-  $('#app').innerHTML = `
-    <div class="panel" style="max-width:480px;margin:10px auto">
-      <h2>دخول الأعضاء</h2>
-      ${pendingInvite ? `<div class="notice" style="margin-bottom:10px">لديك رابط دعوة. سجّل الدخول بنفس البريد الذي وصلتك عليه الدعوة.</div>` : ''}
-      <p class="hint" style="font-size:15px">اكتب بريدك الإلكتروني وسنرسل لك <b>رابط دخول دائم</b>. احتفظ بالرسالة، وادخل منها في أي وقت ومن أي جهاز بدون كلمة مرور.</p>
-      <form id="lf"><label for="em">البريد الإلكتروني</label><input class="in" id="em" type="email" dir="ltr" required placeholder="name@gmail.com">
-      <div class="row" style="margin-top:14px"><button class="btn" id="lbtn">${api.demo ? 'دخول (معاينة)' : 'أرسل رابط الدخول'}</button></div></form>
-      <div id="lmsg" style="margin-top:12px"></div>
-      <p class="hint">الزوار يستطيعون تصفح الموقع بدون تسجيل. النشر والتعليق للأعضاء المدعوين فقط.</p>
-    </div>`;
-  $('#lf').onsubmit = async e => {
+  $('#uf').onsubmit = async e => {
     e.preventDefault();
-    const email = $('#em').value.trim(), btn = $('#lbtn'); btn.disabled = true;
-    try {
-      const r = await api.sendLink(email, pendingInvite);
-      if (r !== 'demo') $('#lmsg').innerHTML = `<div class="notice">تم إرسال رابط الدخول إلى <b dir="ltr">${esc(email)}</b>. افتح بريدك (وتفقد مجلد Spam) واضغط على الرابط.</div>`;
-    } catch(er) { $('#lmsg').innerHTML = `<div class="notice err">${esc(errMsg(er))}</div>`; }
+    const btn = $('#ubtn'); btn.disabled = true;
+    try { await api.changeUsername($('#un').value); toast('تم حفظ اسم المستخدم'); } catch(er) { toast(errMsg(er)); }
+    btn.disabled = false;
+  };
+  $('#pwf').onsubmit = async e => {
+    e.preventDefault();
+    const a = $('#pw1').value, b = $('#pw2').value;
+    if (a.length < 8) return toast(errMsg('PASSWORD_SHORT'));
+    if (a !== b) return toast('كلمتا المرور غير متطابقتين');
+    const btn = $('#pwbtn'); btn.disabled = true;
+    try { await api.changePassword($('#pw0').value, a); toast('تم تغيير كلمة المرور'); $('#pwf').reset(); } catch(er) { toast(errMsg(er)); }
     btn.disabled = false;
   };
 }
 
-function viewJoin(){
-  const u = me();
-  if (!u) return viewLogin();
-  if (myProfile()) { location.hash = '#me'; return; }
-  const adm = api.isAdmin();
-  if (!pendingInvite && !adm) {
-    $('#app').innerHTML = `<div class="panel" style="max-width:520px;margin:10px auto"><h2>حسابك غير مدعو</h2>
-      <p>أنت مسجّل الدخول بـ <b dir="ltr">${esc(u.email)}</b>، لكن هذا البريد ليس عضوًا في المنصة.</p>
-      <div class="notice">الانضمام يتم فقط عن طريق رابط دعوة يرسله لك المدرب أو مسؤول المنصة على بريدك. افتح الرابط من الإيميل.</div>
-      <p class="hint">تقدر تتصفح المتدربين وأعمالهم كزائر.</p></div>`;
+const authTabs = on => `<div class="seg" style="margin-bottom:16px"><a class="${on === 'login' ? 'on' : ''}" href="#login">دخول</a><a class="${on === 'register' ? 'on' : ''}" href="#register">حساب جديد</a></div>`;
+const pwToggle = id => `<button type="button" class="btn ghost sm pwt" data-for="${id}">إظهار</button>`;
+function bindPwToggles(){
+  document.querySelectorAll('.pwt').forEach(b => b.onclick = () => { const i = $('#' + b.dataset.for); const show = i.type === 'password'; i.type = show ? 'text' : 'password'; b.textContent = show ? 'إخفاء' : 'إظهار'; });
+}
+
+function viewLogin(){
+  if (me()) { location.hash = '#me'; return; }
+  $('#app').innerHTML = `
+    <div class="panel" style="max-width:480px;margin:10px auto">
+      ${authTabs('login')}
+      <h2>دخول الأعضاء</h2>
+      <form id="lf">
+        <label for="lg">اسم المستخدم أو الإيميل</label><input class="in" id="lg" dir="ltr" autocapitalize="none" spellcheck="false" required autocomplete="username" placeholder="${api.demo ? 'abed' : 'username'}">
+        <label for="lp">كلمة المرور</label><div class="row"><input class="in" id="lp" type="password" dir="ltr" required autocomplete="current-password" style="flex:1">${pwToggle('lp')}</div>
+        <div class="row" style="margin-top:14px;justify-content:space-between"><button class="btn" id="lbtn">دخول</button><a href="#forgot">نسيت كلمة المرور؟</a></div>
+      </form>
+      <div id="lmsg" style="margin-top:12px"></div>
+      ${api.demo ? `<p class="hint">في وضع المعاينة: abed أو sara، وكلمة المرور demo1234.</p>` : ''}
+      <p class="hint">الزوار يتصفحون الموقع بدون تسجيل. ما عندك حساب؟ <a href="#register">سجّل الآن</a> وبعد موافقة المسؤول بتقدر تنشر وتعلّق.</p>
+    </div>`;
+  bindPwToggles();
+  $('#lf').onsubmit = async e => {
+    e.preventDefault();
+    const btn = $('#lbtn'); btn.disabled = true; $('#lmsg').innerHTML = '';
+    try { await api.login($('#lg').value, $('#lp').value); await refresh(false); location.hash = myProfile() ? '#u-' + me().id : '#me'; }
+    catch(er) {
+      const pend = String(er?.message || '').includes('PENDING_APPROVAL');
+      $('#lmsg').innerHTML = `<div class="notice ${pend ? '' : 'err'}">${esc(errMsg(er))}</div>`; btn.disabled = false;
+    }
+  };
+}
+
+function viewRegister(){
+  if (me()) { location.hash = '#me'; return; }
+  $('#app').innerHTML = `
+    <div class="panel" style="max-width:520px;margin:10px auto">
+      ${authTabs('register')}
+      <h2>طلب حساب جديد</h2>
+      <p class="hint" style="font-size:15px">عبّي بياناتك، وطلبك بيروح للمسؤول. لما يوافق بيوصلك إيميل وبتقدر تدخل.</p>
+      <form id="rf">
+        <label for="rn">الاسم الكامل</label><input class="in" id="rn" maxlength="60" required autocomplete="name" placeholder="كما تحب يظهر للجميع">
+        <label for="ru">اسم المستخدم</label><input class="in" id="ru" dir="ltr" autocapitalize="none" spellcheck="false" maxlength="30" required autocomplete="username" placeholder="sara_ahmad">
+        <div class="hint">من 3 إلى 30: أحرف إنجليزية صغيرة وأرقام و _ و .</div>
+        <label for="re">الإيميل</label><input class="in" id="re" type="email" dir="ltr" maxlength="190" required autocomplete="email" placeholder="name@gmail.com">
+        <div class="hint">عليه بيوصلك خبر القبول، ورابط إذا نسيت كلمة المرور.</div>
+        <label for="rp">كلمة المرور</label><div class="row"><input class="in" id="rp" type="password" dir="ltr" minlength="8" required autocomplete="new-password" style="flex:1">${pwToggle('rp')}</div>
+        <label for="rp2">تأكيد كلمة المرور</label><input class="in" id="rp2" type="password" dir="ltr" minlength="8" required autocomplete="new-password">
+        <div class="row" style="margin-top:16px"><button class="btn" id="rbtn">إرسال الطلب</button></div>
+      </form>
+      <div id="rmsg" style="margin-top:12px"></div>
+    </div>`;
+  bindPwToggles();
+  $('#rf').onsubmit = async e => {
+    e.preventDefault();
+    const f = { full_name:$('#rn').value, username:$('#ru').value.trim().toLowerCase(), email:$('#re').value, password:$('#rp').value };
+    const bad = m => { $('#rmsg').innerHTML = `<div class="notice err">${esc(m)}</div>`; };
+    if (f.full_name.trim().length < 2) return bad(errMsg('NAME_REQUIRED'));
+    if (!/^[a-z0-9_.]{3,30}$/.test(f.username)) return bad(errMsg('USERNAME_INVALID'));
+    if (f.password.length < 8) return bad(errMsg('PASSWORD_SHORT'));
+    if (f.password !== $('#rp2').value) return bad('كلمتا المرور غير متطابقتين.');
+    const btn = $('#rbtn'); btn.disabled = true; btn.textContent = 'جاري الإرسال…';
+    try {
+      await api.register(f);
+      $('#app').innerHTML = `<div class="panel" style="max-width:520px;margin:10px auto"><h2>تم إرسال طلبك ✅</h2>
+        <p style="font-size:16px;line-height:1.9">شكرًا ${esc(f.full_name.trim())}! طلبك وصل للمسؤول وهو قيد المراجعة.<br>لما تتم الموافقة بيوصلك إيميل على <b dir="ltr">${esc(f.email.trim())}</b>، وبعدها بتدخل باسم المستخدم <b dir="ltr">${esc(f.username)}</b> وكلمة المرور اللي اخترتها.</p>
+        <div class="row"><a class="btn ghost" href="#home">تصفح الموقع</a></div></div>`;
+    } catch(er) { bad(errMsg(er)); btn.disabled = false; btn.textContent = 'إرسال الطلب'; }
+  };
+}
+
+function viewForgot(){
+  $('#app').innerHTML = `
+    <div class="panel" style="max-width:480px;margin:10px auto">
+      <a class="back" href="#login" style="margin:0 0 10px">${ICON.back}رجوع للدخول</a>
+      <h2>نسيت كلمة المرور</h2>
+      <p class="hint" style="font-size:15px">اكتب إيميلك المسجّل وبنبعتلك رابط لتعيين كلمة مرور جديدة. نفس الطريقة بتفتح حساب المسؤول أول مرة.</p>
+      <form id="ff"><label for="fe">الإيميل</label><input class="in" id="fe" type="email" dir="ltr" required autocomplete="email" placeholder="name@gmail.com">
+        <div class="row" style="margin-top:14px"><button class="btn" id="fbtn">أرسل الرابط</button></div></form>
+      <div id="fmsg" style="margin-top:12px"></div>
+    </div>`;
+  $('#ff').onsubmit = async e => {
+    e.preventDefault();
+    const email = $('#fe').value.trim(), btn = $('#fbtn'); btn.disabled = true;
+    try {
+      await api.forgot(email);
+      $('#fmsg').innerHTML = `<div class="notice">${api.demo ? 'في وضع المعاينة ما بتنبعت رسائل.' : `إذا كان <b dir="ltr">${esc(email)}</b> مسجّل وحسابه مفعّل، رح يوصله رابط خلال دقيقة. تفقّد مجلد Spam كمان.`}</div>`;
+    } catch(er) { $('#fmsg').innerHTML = `<div class="notice err">${esc(errMsg(er))}</div>`; }
+    btn.disabled = false;
+  };
+}
+
+function viewReset(){
+  if (!resetToken) {
+    $('#app').innerHTML = `<div class="panel" style="max-width:480px;margin:10px auto"><h2>تعيين كلمة المرور</h2><div class="notice">افتح الرابط اللي وصلك على الإيميل، أو <a href="#forgot">اطلب رابطًا جديدًا</a>.</div></div>`;
     return;
   }
-  $('#app').innerHTML = `<div class="panel" style="max-width:520px;margin:10px auto">
-    <h2>${adm && !pendingInvite ? 'إنشاء ملفك كأدمن' : 'أهلًا بك في صُنّاع AI 2 👋'}</h2>
-    <p class="hint" style="font-size:15px">${pendingInvite ? 'تم التحقق من رابط الدعوة. اكتب اسمك كما تريد أن يظهر للجميع.' : 'كأدمن تقدر تنشئ ملفًا شخصيًا لتنشر أعمالك أيضًا (اختياري).'}</p>
-    <form id="jf"><label for="jn">الاسم الكامل</label><input class="in" id="jn" maxlength="60" required>
-    <div class="row" style="margin-top:14px"><button class="btn" id="jbtn">إنشاء ملفي</button></div></form>
-    <div id="jmsg" style="margin-top:12px"></div></div>`;
-  $('#jf').onsubmit = async e => {
+  $('#app').innerHTML = `
+    <div class="panel" style="max-width:480px;margin:10px auto">
+      <h2>تعيين كلمة مرور جديدة</h2>
+      <form id="sf">
+        <label for="s1">كلمة المرور الجديدة</label><div class="row"><input class="in" id="s1" type="password" dir="ltr" minlength="8" required autocomplete="new-password" style="flex:1">${pwToggle('s1')}</div>
+        <label for="s2">تأكيد كلمة المرور</label><input class="in" id="s2" type="password" dir="ltr" minlength="8" required autocomplete="new-password">
+        <div class="row" style="margin-top:14px"><button class="btn" id="sbtn2">حفظ والدخول</button></div>
+      </form>
+      <div id="smsg" style="margin-top:12px"></div>
+    </div>`;
+  bindPwToggles();
+  $('#sf').onsubmit = async e => {
     e.preventDefault();
-    const name = $('#jn').value.trim(); if (name.length < 2) return;
-    const btn = $('#jbtn'); btn.disabled = true;
+    const a = $('#s1').value, bad = m => { $('#smsg').innerHTML = `<div class="notice err">${esc(m)}</div>`; };
+    if (a.length < 8) return bad(errMsg('PASSWORD_SHORT'));
+    if (a !== $('#s2').value) return bad('كلمتا المرور غير متطابقتين.');
+    const btn = $('#sbtn2'); btn.disabled = true;
     try {
-      await api.join(pendingInvite, name);
-      clearInvite(); toast('تم إنشاء ملفك!');
-      await refresh(false); location.hash = '#me';
-    } catch(er) {
-      $('#jmsg').innerHTML = `<div class="notice err">${esc(errMsg(er))}</div>`; btn.disabled = false;
-      if (/INVITE_(USED|INVALID)/.test(String(er?.message))) clearInvite();
-    }
+      await api.resetPassword(resetToken, a); resetToken = null;
+      toast('تم حفظ كلمة المرور 🎉'); await refresh(false); location.hash = '#me';
+    } catch(er) { bad(errMsg(er)); btn.disabled = false; if (String(er?.message).includes('RESET_LINK_INVALID')) resetToken = null; }
   };
 }
 
 async function viewAdmin(){
   if (!api.isAdmin()) return notFound('هذه الصفحة للمسؤولين فقط.');
   $('#app').innerHTML = `
-    <div class="panel"><h2>دعوة متدرب جديد</h2>
-      <p class="hint" style="font-size:15px">اكتب بريد المتدرب. سيتم إنشاء رابط خاص به يعمل مرة واحدة فقط، ولا يقبله إلا نفس هذا البريد.</p>
-      <form id="inf" class="row"><input class="in" id="iem" type="email" dir="ltr" required placeholder="trainee@gmail.com" style="flex:1;min-width:220px"><button class="btn">إنشاء رابط دعوة</button></form>
-      <div id="iout"></div>
-    </div>
-    <div class="panel"><h2>الدعوات</h2><div id="ilist" class="hint">جاري التحميل…</div></div>
+    <div class="panel"><h2>طلبات الانضمام</h2><div id="rlist" class="hint">جاري التحميل…</div></div>
     <div class="panel"><h2>الأعضاء (${S.profiles.length})</h2>
       <table class="table"><tbody>${S.profiles.map(p => `<tr><td><a class="row" href="#u-${p.id}" style="color:inherit">${avatar(p,32)}<b>${esc(p.full_name)}</b></a></td><td style="color:var(--muted)">${S.works.filter(w=>w.user_id===p.id).length} عمل</td></tr>`).join('') || '<tr><td>لا يوجد أعضاء بعد.</td></tr>'}</tbody></table>
       <p class="hint">لإزالة عضو افتح صفحته واضغط "إزالة العضو".</p>
     </div>`;
-  const inviteLink = t => location.origin + location.pathname + '?invite=' + t;
-  const gmail = (email, link) => 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(email)
-    + '&su=' + encodeURIComponent('دعوة للانضمام إلى منصة صُنّاع AI 2 — Spark')
-    + '&body=' + encodeURIComponent(`مرحبًا،\n\nتمت دعوتك للانضمام إلى منصة "صُنّاع AI 2" لعرض تمارينك وتصاميمك مع متدربي سبارك.\n\nرابط الدعوة الخاص بك (يعمل مرة واحدة فقط ومع هذا البريد فقط):\n${link}\n\nافتح الرابط، اكتب بريدك هذا، ثم افتح رابط الدخول الذي سيصلك.\n\nبالتوفيق!`);
-  const showOut = inv => {
-    const link = inviteLink(inv.token);
-    $('#iout').innerHTML = `<div class="invite-out"><b>رابط الدعوة لـ <span dir="ltr">${esc(inv.email)}</span></b><code>${esc(link)}</code>
-      <div class="row"><a class="btn" href="${esc(gmail(inv.email, link))}" target="_blank" rel="noopener">إرسال عبر Gmail</a><button class="btn ghost" id="cpy">نسخ الرابط</button>
-      ${api.demo ? `<button class="btn ghost" id="tryInv">تجربة الرابط (معاينة)</button>` : ''}</div>
-      <div class="hint">زر Gmail يفتح رسالة جاهزة من بريدك — راجعها واضغط إرسال.</div></div>`;
-    $('#cpy').onclick = () => copy(link);
-    const t = $('#tryInv'); if (t) t.onclick = () => { pendingInvite = inv.token; api.switchTo(''); toast('سجّل الدخول ببريد الدعوة لتجربة الانضمام'); location.hash = '#login'; };
-  };
-  const drawInv = async () => {
-    let list; try { list = await api.invites(); } catch(e) { $('#ilist').innerHTML = `<div class="notice err">${esc(errMsg(e))}</div>`; return; }
-    $('#ilist').innerHTML = list.length ? `<table class="table"><thead><tr><th>البريد</th><th>الحالة</th><th></th></tr></thead><tbody>${list.map(i => `
-      <tr><td dir="ltr" style="text-align:right;word-break:break-all">${esc(i.email)}</td>
-      <td>${i.used_at ? `<span class="st ok">تم الانضمام</span>` : `<span class="st wait">بانتظار</span>`}<div class="hint" style="margin:2px 0 0">${fmtDate(i.created_at)}</div></td>
-      <td style="white-space:nowrap">${i.used_at ? '' : `<button class="btn ghost sm" data-show="${i.token}">الرابط</button> `}<button class="btn warn sm" data-del="${i.token}">حذف</button></td></tr>`).join('')}</tbody></table>`
-      : 'لا توجد دعوات بعد.';
-    $('#ilist').querySelectorAll('[data-show]').forEach(b => b.onclick = () => { showOut(list.find(i => i.token === b.dataset.show)); $('#iout').scrollIntoView({behavior:'smooth',block:'center'}); });
-    $('#ilist').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
-      if (!await confirmBox('حذف هذه الدعوة؟ الرابط لن يعمل بعد الآن (لا يؤثر على عضو انضم مسبقًا).', 'حذف')) return;
-      try { await api.delInvite(b.dataset.del); drawInv(); } catch(e) { toast(errMsg(e)); }
+  const draw = async () => {
+    let list; try { list = await api.requests(); } catch(e) { $('#rlist').innerHTML = `<div class="notice err">${esc(errMsg(e))}</div>`; return; }
+    $('#rlist').innerHTML = list.length ? `<table class="table"><thead><tr><th>الاسم</th><th>اسم المستخدم والإيميل</th><th></th></tr></thead><tbody>${list.map(r => `
+      <tr><td><b>${esc(r.full_name || '')}</b><div class="hint" style="margin:2px 0 0">${fmtDate(r.created_at)}</div></td>
+      <td dir="ltr" style="text-align:right;word-break:break-all"><b>${esc(r.username)}</b><div class="hint" style="margin:2px 0 0">${esc(r.email)}</div></td>
+      <td style="white-space:nowrap"><button class="btn sm" data-ok="${esc(r.id)}">قبول</button> <button class="btn warn sm" data-no="${esc(r.id)}">رفض</button></td></tr>`).join('')}</tbody></table>`
+      : 'لا توجد طلبات جديدة. أي حد بيسجّل من صفحة "حساب جديد" بيظهر طلبه هون، وبيوصلك إيميل فيه.';
+    const name = id => list.find(r => r.id === id)?.full_name || '';
+    $('#rlist').querySelectorAll('[data-ok]').forEach(b => b.onclick = async () => {
+      b.disabled = true;
+      try { await api.approve(b.dataset.ok); toast(`تم قبول ${name(b.dataset.ok)} ✅`); await refresh(false); viewAdmin(); } catch(e) { toast(errMsg(e)); b.disabled = false; }
+    });
+    $('#rlist').querySelectorAll('[data-no]').forEach(b => b.onclick = async () => {
+      if (!await confirmBox(`رفض طلب ${name(b.dataset.no)}؟ رح يوصله إيميل بالاعتذار، وبيقدر يقدّم من جديد.`, 'رفض')) return;
+      try { await api.reject(b.dataset.no); toast('تم رفض الطلب'); renderNav(); draw(); } catch(e) { toast(errMsg(e)); }
     });
   };
-  drawInv();
-  $('#inf').onsubmit = async e => {
-    e.preventDefault();
-    const email = $('#iem').value.trim().toLowerCase();
-    try { const inv = await api.createInvite(email); showOut(inv); $('#iem').value = ''; drawInv(); } catch(er) { toast(errMsg(er)); }
-  };
+  draw();
 }
-
 
 function viewExercise(n){
   if (!(n >= 1)) return notFound('رقم تمرين غير صحيح.');
@@ -1813,7 +1903,9 @@ function _route(){
   if (h.startsWith('u-')) return viewProfile(h.slice(2));
   if (h.startsWith('w-')) return viewWork(h.slice(2));
   if (h === 'login') return viewLogin();
-  if (h === 'join') return viewJoin();
+  if (h === 'register') return viewRegister();
+  if (h === 'forgot') return viewForgot();
+  if (h === 'reset') return viewReset();
   if (h === 'me') return viewMe();
   if (h === 'admin') return viewAdmin();
   if (h === 'notifs') return viewNotifs();
@@ -1831,11 +1923,6 @@ async function refresh(rerender=true){
   catch(e) { $('#app').innerHTML = `<div class="notice err">تعذّر تحميل البيانات: ${esc(errMsg(e))}</div>`; return; }
   renderNav(); renderDemoBar();
   if (rerender) route();
-}
-function clearInvite(){
-  pendingInvite = null;
-  try { localStorage.removeItem('spark_pending_invite'); } catch(e) {}
-  if (location.search.includes('invite=')) history.replaceState(null, '', location.pathname + location.hash);
 }
 
 
@@ -2046,14 +2133,13 @@ async function start(){
   document.documentElement.dataset.theme = 'dark';
   $('#replayIntro').onclick = e => { e.preventDefault(); scrollTop0(); if (playIntro(true)) { location.hash = '#home'; route(); } };
   $('#menuBtn').onclick = () => $('#nav').classList.toggle('open');
-  // رابط الدعوة ?invite=TOKEN
+  // رابط تعيين كلمة المرور ?reset=TOKEN
   const qs = new URLSearchParams(location.search);
-  try { pendingInvite = qs.get('invite') || localStorage.getItem('spark_pending_invite') || null; if (pendingInvite) localStorage.setItem('spark_pending_invite', pendingInvite); } catch(e) { pendingInvite = qs.get('invite'); }
+  if (qs.get('reset')) { resetToken = qs.get('reset'); qs.delete('reset'); history.replaceState(null, '', location.pathname + (qs.toString() ? '?' + qs : '') + '#reset'); }
   api = DEMO ? MockApi() : LaravelApi();
   await api.init();
   api.onChange(async () => { await refresh(false); route(); });
   await refresh(false);
-  if (pendingInvite && !myProfile()) location.hash = me() ? '#join' : '#login';
   route();
   window.addEventListener('hashchange', route);
 }
